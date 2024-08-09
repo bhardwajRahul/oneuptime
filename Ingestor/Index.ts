@@ -7,14 +7,15 @@ import Ingestor from "./API/Probe";
 import RegisterAPI from "./API/Register";
 import ServerMonitorAPI from "./API/ServerMonitor";
 import { PromiseVoidFunction } from "Common/Types/FunctionTypes";
-import { ClickhouseAppInstance } from "CommonServer/Infrastructure/ClickhouseDatabase";
-import { PostgresAppInstance } from "CommonServer/Infrastructure/PostgresDatabase";
-import Redis from "CommonServer/Infrastructure/Redis";
-import InfrastructureStatus from "CommonServer/Infrastructure/Status";
-import Express, { ExpressApplication } from "CommonServer/Utils/Express";
-import logger from "CommonServer/Utils/Logger";
-import Realtime from "CommonServer/Utils/Realtime";
-import App from "CommonServer/Utils/StartServer";
+import { ClickhouseAppInstance } from "Common/Server/Infrastructure/ClickhouseDatabase";
+import { PostgresAppInstance } from "Common/Server/Infrastructure/PostgresDatabase";
+import Redis from "Common/Server/Infrastructure/Redis";
+import InfrastructureStatus from "Common/Server/Infrastructure/Status";
+import Express, { ExpressApplication } from "Common/Server/Utils/Express";
+import logger from "Common/Server/Utils/Logger";
+import Realtime from "Common/Server/Utils/Realtime";
+import App from "Common/Server/Utils/StartServer";
+import Telemetry from "Common/Server/Utils/Telemetry";
 import "ejs";
 
 const app: ExpressApplication = Express.getExpressApp();
@@ -39,6 +40,11 @@ const init: PromiseVoidFunction = async (): Promise<void> => {
         checkRedisStatus: true,
       });
     };
+
+    // Initialize telemetry
+    Telemetry.init({
+      serviceName: APP_NAME,
+    });
 
     // init the app
     await App.init({

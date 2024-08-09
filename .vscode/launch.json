@@ -20,18 +20,18 @@
     ],
     "configurations": [
         {
-            "name": "Debug: Copilot Locally",
-            "request": "launch",
-            "localRoot": "${workspaceFolder}/Copilot",
-            "runtimeArgs": [
-                "run-script",
-                "start"
-            ],
-            "runtimeExecutable": "npm",
+            "address": "127.0.0.1",
+            "localRoot": "${workspaceFolder}/TestServer",
+            "name": "Copilot: Debug with Docker",
+            "port": 9985,
+            "remoteRoot": "/usr/src/app",
+            "request": "attach",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "type": "node"
+            "type": "node",
+            "restart": true,
+            "autoAttachChildProcesses": true
         },
         {
             "name": "Debug Infrastructure Agent",
@@ -218,12 +218,12 @@
             "autoAttachChildProcesses": true
         },
         {
-            "name": "CommonServer: Debug Tests",
+            "name": "Common: Debug Tests",
             "type": "node",
             "restart": true,
             "autoAttachChildProcesses": true,
             "request": "launch",
-            "cwd": "${workspaceRoot}/CommonServer",
+            "cwd": "${workspaceRoot}/Common",
             "runtimeExecutable": "npm",
             "runtimeArgs": [
                 "run-script",

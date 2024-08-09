@@ -46,6 +46,8 @@ import "./Jobs/StatusPageOwners/SendAnnouncementCreatedNotification";
 // Status Page Owners
 import "./Jobs/StatusPageOwners/SendCreatedResourceNotification";
 import "./Jobs/StatusPageOwners/SendOwnerAddedNotification";
+// Status Page Reports
+import "./Jobs/StatusPage/SendReportsToSubscribers";
 // Telemetry Service
 import "./Jobs/TelemetryService/DeleteOldData";
 // User Notifications Log
@@ -56,10 +58,17 @@ import AnalyticsTableManagement from "./Utils/AnalyticsDatabase/TableManegement"
 import RunDatabaseMigrations from "./Utils/DataMigration";
 import JobDictionary from "./Utils/JobDictionary";
 import { PromiseVoidFunction } from "Common/Types/FunctionTypes";
-import { QueueJob, QueueName } from "CommonServer/Infrastructure/Queue";
-import QueueWorker from "CommonServer/Infrastructure/QueueWorker";
-import FeatureSet from "CommonServer/Types/FeatureSet";
-import logger from "CommonServer/Utils/Logger";
+import { QueueJob, QueueName } from "Common/Server/Infrastructure/Queue";
+import QueueWorker from "Common/Server/Infrastructure/QueueWorker";
+import FeatureSet from "Common/Server/Types/FeatureSet";
+import logger from "Common/Server/Utils/Logger";
+
+// Probes
+import "./Jobs/Probe/SendOwnerAddedNotification";
+import "./Jobs/Probe/UpdateConnectionStatus";
+
+// Telemetry Monitors.
+import "./Jobs/TelemetryMonitor/MonitorTelemetryMonitor";
 
 const WorkersFeatureSet: FeatureSet = {
   init: async (): Promise<void> => {

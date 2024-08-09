@@ -1,6 +1,6 @@
 import {
-  GetGitHubToken,
-  GetGitHubUsername,
+  GetCodeRepositoryPassword,
+  GetCodeRepositoryUsername,
   GetLocalRepositoryPath,
   GetOneUptimeURL,
   GetRepositorySecretKey,
@@ -14,27 +14,342 @@ import PullRequestState from "Common/Types/CodeRepository/PullRequestState";
 import BadDataException from "Common/Types/Exception/BadDataException";
 import { JSONArray, JSONObject } from "Common/Types/JSON";
 import API from "Common/Utils/API";
-import CodeRepositoryServerUtil from "CommonServer/Utils/CodeRepository/CodeRepository";
-import GitHubUtil from "CommonServer/Utils/CodeRepository/GitHub/GitHub";
-import logger from "CommonServer/Utils/Logger";
-import CodeRepositoryModel from "Model/Models/CodeRepository";
-import ServiceRepository from "Model/Models/ServiceRepository";
+import CodeRepositoryServerUtil from "Common/Server/Utils/CodeRepository/CodeRepository";
+import GitHubUtil from "Common/Server/Utils/CodeRepository/GitHub/GitHub";
+import LocalFile from "Common/Server/Utils/LocalFile";
+import logger from "Common/Server/Utils/Logger";
+import CopilotCodeRepository from "Common/Models/DatabaseModels/CopilotCodeRepository";
+import ServiceCopilotCodeRepository from "Common/Models/DatabaseModels/ServiceCopilotCodeRepository";
+import Text from "Common/Types/Text";
+import Execute from "Common/Server/Utils/Execute";
+import CopilotPullRequestService from "../Service/CopilotPullRequest";
+import CopilotPullRequest from "Common/Models/DatabaseModels/CopilotPullRequest";
 
 export interface CodeRepositoryResult {
-  codeRepository: CodeRepositoryModel;
-  servicesToImprove: Array<ServiceToImproveResult>;
-  serviceRepositories: Array<ServiceRepository>;
+  codeRepository: CopilotCodeRepository;
+  serviceRepositories: Array<ServiceCopilotCodeRepository>;
 }
 
 export interface ServiceToImproveResult {
-  serviceRepository: ServiceRepository;
+  serviceRepository: ServiceCopilotCodeRepository;
   numberOfOpenPullRequests: number;
-  pullRequests: Array<PullRequest>;
+  pullRequests: Array<CopilotPullRequest>;
+}
+
+export enum RepoScriptType {
+  OnAfterClone = "onAfterClone",
+  OnBeforeCommit = "onBeforeCommit",
+  OnAfterCommit = "OnAfterCommit",
+  OnBeforeCodeChange = "OnBeforeCodeChange",
+  OnAfterCodeChange = "OnAfterCodeChange",
 }
 
 export default class CodeRepositoryUtil {
   public static codeRepositoryResult: CodeRepositoryResult | null = null;
   public static gitHubUtil: GitHubUtil | null = null;
+  public static folderNameOfClonedRepository: string | null = null;
+
+  public static isRepoCloned(): boolean {
+    return Boolean(this.folderNameOfClonedRepository);
+  }
+
+  public static async getOpenSetupPullRequest(): Promise<CopilotPullRequest | null> {
+    const openPullRequests: Array<CopilotPullRequest> =
+      await CopilotPullRequestService.getOpenPullRequestsFromDatabase();
+
+    for (const pullRequest of openPullRequests) {
+      if (pullRequest.isSetupPullRequest) {
+        return pullRequest;
+      }
+    }
+
+    return null;
+  }
+
+  public static getLocalRepositoryPath(): string {
+    if (this.folderNameOfClonedRepository) {
+      return LocalFile.sanitizeFilePath(
+        GetLocalRepositoryPath() + "/" + this.folderNameOfClonedRepository,
+      );
+    }
+
+    return GetLocalRepositoryPath();
+  }
+
+  public static async discardAllChangesOnCurrentBranch(): Promise<void> {
+    await CodeRepositoryServerUtil.discardAllChangesOnCurrentBranch({
+      repoPath: this.getLocalRepositoryPath(),
+    });
+  }
+
+  public static async setAuthorIdentity(data: {
+    name: string;
+    email: string;
+  }): Promise<void> {
+    await CodeRepositoryServerUtil.setAuthorIdentity({
+      repoPath: this.getLocalRepositoryPath(),
+      authorName: data.name,
+      authorEmail: data.email,
+    });
+  }
+
+  public static async getPullRequestState(data: {
+    pullRequestId: string;
+  }): Promise<PullRequestState> {
+    // check if org name and repo name is present.
+
+    if (!this.codeRepositoryResult?.codeRepository.organizationName) {
+      throw new BadDataException("Organization Name is required");
+    }
+
+    if (!this.codeRepositoryResult?.codeRepository.repositoryName) {
+      throw new BadDataException("Repository Name is required");
+    }
+
+    const githubUtil: GitHubUtil = this.getGitHubUtil();
+
+    if (!githubUtil) {
+      throw new BadDataException("GitHub Util is required");
+    }
+
+    const pullRequest: PullRequest | undefined =
+      await githubUtil.getPullRequestByNumber({
+        organizationName:
+          this.codeRepositoryResult.codeRepository.organizationName,
+        repositoryName: this.codeRepositoryResult.codeRepository.repositoryName,
+        pullRequestId: data.pullRequestId,
+      });
+
+    if (!pullRequest) {
+      throw new BadDataException("Pull Request not found");
+    }
+
+    return pullRequest.state;
+  }
+
+  public static async setUpRepo(): Promise<PullRequest> {
+    // check if the repository is setup properly.
+    const isRepoSetupProperly: boolean = await this.isRepoSetupProperly();
+
+    if (isRepoSetupProperly) {
+      throw new BadDataException("Repository is already setup properly.");
+    }
+
+    // otherwise, we copy the folder /usr/src/app/Templates/.oneuptime to the repository folder.
+
+    const templateFolderPath: string = LocalFile.sanitizeFilePath(
+      "/usr/src/app/Templates/.oneuptime",
+    );
+
+    const oneUptimeConfigPath: string = LocalFile.sanitizeFilePath(
+      this.getLocalRepositoryPath() + "/.oneuptime",
+    );
+
+    // create a new branch called oneuptime-copilot-setup
+
+    const branchName: string = "setup-" + Text.generateRandomText(5);
+
+    await this.createBranch({
+      branchName: branchName,
+    });
+
+    await LocalFile.makeDirectory(oneUptimeConfigPath);
+
+    await LocalFile.copyDirectory({
+      source: templateFolderPath,
+      destination: oneUptimeConfigPath,
+    });
+
+    // add all the files to the git.
+
+    await this.addAllChangedFilesToGit();
+
+    // commit the changes.
+
+    await this.commitChanges({
+      message: "OneUptime Copilot Setup",
+    });
+
+    // push changes to the repo.
+
+    await this.pushChanges({
+      branchName: branchName,
+    });
+
+    // create a pull request.
+
+    const pullRequest: PullRequest = await this.createPullRequest({
+      branchName: branchName,
+      title: "OneUptime Copilot Setup",
+      body: "This pull request is created by OneUptime Copilot to setup the repository.",
+    });
+
+    // save this to the database.
+
+    await CopilotPullRequestService.addPullRequestToDatabase({
+      pullRequest: pullRequest,
+      isSetupPullRequest: true,
+    });
+
+    return pullRequest;
+  }
+
+  public static async isRepoSetupProperly(): Promise<boolean> {
+    // check if .oneuptime folder exists.
+
+    const repoPath: string = this.getLocalRepositoryPath();
+
+    const oneUptimeFolderPath: string = LocalFile.sanitizeFilePath(
+      `${repoPath}/.oneuptime`,
+    );
+
+    const doesDirectoryExist: boolean =
+      await LocalFile.doesDirectoryExist(oneUptimeFolderPath);
+
+    if (!doesDirectoryExist) {
+      return false;
+    }
+
+    // check if .oneuptime/scripts folder exists.
+
+    const oneuptimeScriptsPath: string = LocalFile.sanitizeFilePath(
+      `${oneUptimeFolderPath}/scripts`,
+    );
+
+    const doesScriptsDirectoryExist: boolean =
+      await LocalFile.doesDirectoryExist(oneuptimeScriptsPath);
+
+    if (!doesScriptsDirectoryExist) {
+      return false;
+    }
+
+    return true; // return true if all checks pass.
+  }
+
+  public static addAllChangedFilesToGit(): Promise<void> {
+    return CodeRepositoryServerUtil.addAllChangedFilesToGit({
+      repoPath: this.getLocalRepositoryPath(),
+    });
+  }
+
+  // returns the folder name of the cloned repository.
+  public static async cloneRepository(data: {
+    codeRepository: CopilotCodeRepository;
+  }): Promise<void> {
+    // make sure this.getLocalRepositoryPath() is empty.
+    const repoLocalPath: string = this.getLocalRepositoryPath();
+
+    await LocalFile.deleteAllDataInDirectory(repoLocalPath);
+    await LocalFile.makeDirectory(repoLocalPath);
+
+    // check if the data in the directory eixsts, if it does then delete it.
+
+    if (!data.codeRepository.repositoryHostedAt) {
+      throw new BadDataException("Repository Hosted At is required");
+    }
+
+    if (!data.codeRepository.mainBranchName) {
+      throw new BadDataException("Main Branch Name is required");
+    }
+
+    if (!data.codeRepository.organizationName) {
+      throw new BadDataException("Organization Name is required");
+    }
+
+    if (!data.codeRepository.repositoryName) {
+      throw new BadDataException("Repository Name is required");
+    }
+
+    const CodeRepositoryUsername: string | null = GetCodeRepositoryUsername();
+
+    if (!CodeRepositoryUsername) {
+      throw new BadDataException("Code Repository Username is required");
+    }
+
+    const CodeRepositoryPassword: string | null = GetCodeRepositoryPassword();
+
+    if (!CodeRepositoryPassword) {
+      throw new BadDataException("Code Repository Password is required");
+    }
+
+    const repoUrl: string = `https://${CodeRepositoryUsername}:${CodeRepositoryPassword}@${
+      data.codeRepository.repositoryHostedAt === CodeRepositoryType.GitHub
+        ? "github.com"
+        : ""
+    }/${data.codeRepository.organizationName}/${data.codeRepository.repositoryName}.git`;
+
+    const folderName: string = await CodeRepositoryServerUtil.cloneRepository({
+      repoUrl: repoUrl,
+      repoPath: repoLocalPath,
+    });
+
+    this.folderNameOfClonedRepository = folderName;
+  }
+
+  public static async executeScript(data: { script: string }): Promise<string> {
+    const commands: Array<string> = data.script
+      .split("\n")
+      .filter((command: string) => {
+        return command.trim() !== "" && !command.startsWith("#");
+      });
+
+    const results: Array<string> = [];
+
+    for (const command of commands) {
+      logger.info(`Executing command: ${command}`);
+      const commandResult: string = await Execute.executeCommand(
+        `cd ${this.getLocalRepositoryPath()} && ${command}`,
+      );
+      if (commandResult) {
+        logger.info(`Command result: ${commandResult}`);
+        results.push(commandResult);
+      }
+    }
+
+    return results.join("\n");
+  }
+
+  public static async getRepoScript(data: {
+    scriptType: RepoScriptType;
+  }): Promise<string | null> {
+    const repoPath: string = this.getLocalRepositoryPath();
+
+    const oneUptimeFolderPath: string = LocalFile.sanitizeFilePath(
+      `${repoPath}/.oneuptime`,
+    );
+
+    const doesDirectoryExist: boolean =
+      await LocalFile.doesDirectoryExist(oneUptimeFolderPath);
+
+    if (!doesDirectoryExist) {
+      return null;
+    }
+
+    const oneuptimeScriptsPath: string = LocalFile.sanitizeFilePath(
+      `${oneUptimeFolderPath}/scripts`,
+    );
+
+    const doesScriptsDirectoryExist: boolean =
+      await LocalFile.doesDirectoryExist(oneuptimeScriptsPath);
+
+    if (!doesScriptsDirectoryExist) {
+      return null;
+    }
+
+    const scriptPath: string = LocalFile.sanitizeFilePath(
+      `${oneuptimeScriptsPath}/${Text.fromPascalCaseToDashes(data.scriptType)}.sh`,
+    );
+
+    const doesScriptExist: boolean = await LocalFile.doesFileExist(scriptPath);
+
+    if (!doesScriptExist) {
+      return null;
+    }
+
+    const scriptContent: string = await LocalFile.read(scriptPath);
+
+    return scriptContent.trim() || null;
+  }
 
   public static hasOpenPRForFile(data: {
     filePath: string;
@@ -59,11 +374,20 @@ export default class CodeRepositoryUtil {
     return pullRequests;
   }
 
+  public static async listFilesInDirectory(data: {
+    directoryPath: string;
+  }): Promise<Array<string>> {
+    return await CodeRepositoryServerUtil.listFilesInDirectory({
+      repoPath: this.getLocalRepositoryPath(),
+      directoryPath: data.directoryPath,
+    });
+  }
+
   public static getGitHubUtil(): GitHubUtil {
     if (!this.gitHubUtil) {
-      const gitHubToken: string | null = GetGitHubToken();
+      const gitHubToken: string | null = GetCodeRepositoryPassword();
 
-      const gitHubUsername: string | null = GetGitHubUsername();
+      const gitHubUsername: string | null = GetCodeRepositoryUsername();
 
       if (!gitHubUsername) {
         throw new BadDataException("GitHub Username is required");
@@ -84,56 +408,36 @@ export default class CodeRepositoryUtil {
 
   public static async pullChanges(): Promise<void> {
     await CodeRepositoryServerUtil.pullChanges({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
     });
   }
 
-  public static getBranchName(data: {
-    branchName: string;
-    serviceRepository: ServiceRepository;
-  }): string {
-    if (!data.serviceRepository.serviceCatalog) {
-      throw new BadDataException("Service Catalog is required");
-    }
-
-    if (!data.serviceRepository.serviceCatalog.name) {
-      throw new BadDataException("Service Catalog Name is required");
-    }
-
-    return (
-      "oneuptime-" +
-      data.serviceRepository.serviceCatalog?.name?.toLowerCase() +
-      "-" +
-      data.branchName
-    );
+  public static getBranchName(data: { branchName: string }): string {
+    return "oneuptime-copilot-" + data.branchName;
   }
 
   public static async createBranch(data: {
     branchName: string;
-    serviceRepository: ServiceRepository;
   }): Promise<void> {
     const branchName: string = this.getBranchName({
       branchName: data.branchName,
-      serviceRepository: data.serviceRepository,
     });
 
     await CodeRepositoryServerUtil.createBranch({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
       branchName: branchName,
     });
   }
 
   public static async createOrCheckoutBranch(data: {
-    serviceRepository: ServiceRepository;
     branchName: string;
   }): Promise<void> {
     const branchName: string = this.getBranchName({
       branchName: data.branchName,
-      serviceRepository: data.serviceRepository,
     });
 
     await CodeRepositoryServerUtil.createOrCheckoutBranch({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
       branchName: branchName,
     });
   }
@@ -143,7 +447,7 @@ export default class CodeRepositoryUtil {
     content: string;
   }): Promise<void> {
     await CodeRepositoryServerUtil.writeToFile({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
       filePath: data.filePath,
       content: data.content,
     });
@@ -153,14 +457,14 @@ export default class CodeRepositoryUtil {
     directoryPath: string;
   }): Promise<void> {
     await CodeRepositoryServerUtil.createDirectory({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
       directoryPath: data.directoryPath,
     });
   }
 
   public static async deleteFile(data: { filePath: string }): Promise<void> {
     await CodeRepositoryServerUtil.deleteFile({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
       filePath: data.filePath,
     });
   }
@@ -169,28 +473,37 @@ export default class CodeRepositoryUtil {
     directoryPath: string;
   }): Promise<void> {
     await CodeRepositoryServerUtil.deleteDirectory({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
       directoryPath: data.directoryPath,
     });
   }
 
   public static async discardChanges(): Promise<void> {
-    await CodeRepositoryServerUtil.discardChanges({
-      repoPath: GetLocalRepositoryPath(),
-    });
+    if (this.isRepoCloned()) {
+      await CodeRepositoryServerUtil.discardChanges({
+        repoPath: this.getLocalRepositoryPath(),
+      });
+    }
   }
 
   public static async checkoutBranch(data: {
     branchName: string;
   }): Promise<void> {
-    await CodeRepositoryServerUtil.checkoutBranch({
-      repoPath: GetLocalRepositoryPath(),
-      branchName: data.branchName,
-    });
+    if (this.isRepoCloned()) {
+      await CodeRepositoryServerUtil.checkoutBranch({
+        repoPath: this.getLocalRepositoryPath(),
+        branchName: data.branchName,
+      });
+    }
   }
 
   public static async checkoutMainBranch(): Promise<void> {
-    const codeRepository: CodeRepositoryModel = await this.getCodeRepository();
+    if (!this.isRepoCloned()) {
+      return;
+    }
+
+    const codeRepository: CopilotCodeRepository =
+      await this.getCodeRepository();
 
     if (!codeRepository.mainBranchName) {
       throw new BadDataException("Main Branch Name is required");
@@ -205,7 +518,7 @@ export default class CodeRepositoryUtil {
     filePaths: Array<string>;
   }): Promise<void> {
     await CodeRepositoryServerUtil.addFilesToGit({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
       filePaths: data.filePaths,
     });
   }
@@ -217,7 +530,7 @@ export default class CodeRepositoryUtil {
       this.codeRepositoryResult?.codeRepository.repositoryHostedAt ===
       CodeRepositoryType.GitHub
     ) {
-      username = GetGitHubUsername();
+      username = GetCodeRepositoryUsername();
     }
 
     if (!username) {
@@ -225,22 +538,18 @@ export default class CodeRepositoryUtil {
     }
 
     await CodeRepositoryServerUtil.commitChanges({
-      repoPath: GetLocalRepositoryPath(),
+      repoPath: this.getLocalRepositoryPath(),
       message: data.message,
-      username: username,
     });
   }
 
-  public static async pushChanges(data: {
-    branchName: string;
-    serviceRepository: ServiceRepository;
-  }): Promise<void> {
+  public static async pushChanges(data: { branchName: string }): Promise<void> {
     const branchName: string = this.getBranchName({
       branchName: data.branchName,
-      serviceRepository: data.serviceRepository,
     });
 
-    const codeRepository: CodeRepositoryModel = await this.getCodeRepository();
+    const codeRepository: CopilotCodeRepository =
+      await this.getCodeRepository();
 
     if (!codeRepository.mainBranchName) {
       throw new BadDataException("Main Branch Name is required");
@@ -256,7 +565,7 @@ export default class CodeRepositoryUtil {
 
     if (codeRepository.repositoryHostedAt === CodeRepositoryType.GitHub) {
       return await this.getGitHubUtil().pushChanges({
-        repoPath: GetLocalRepositoryPath(),
+        repoPath: this.getLocalRepositoryPath(),
         branchName: branchName,
         organizationName: codeRepository.organizationName,
         repositoryName: codeRepository.repositoryName,
@@ -265,7 +574,8 @@ export default class CodeRepositoryUtil {
   }
 
   public static async switchToMainBranch(): Promise<void> {
-    const codeRepository: CodeRepositoryModel = await this.getCodeRepository();
+    const codeRepository: CopilotCodeRepository =
+      await this.getCodeRepository();
 
     if (!codeRepository.mainBranchName) {
       throw new BadDataException("Main Branch Name is required");
@@ -280,14 +590,13 @@ export default class CodeRepositoryUtil {
     branchName: string;
     title: string;
     body: string;
-    serviceRepository: ServiceRepository;
   }): Promise<PullRequest> {
     const branchName: string = this.getBranchName({
       branchName: data.branchName,
-      serviceRepository: data.serviceRepository,
     });
 
-    const codeRepository: CodeRepositoryModel = await this.getCodeRepository();
+    const codeRepository: CopilotCodeRepository =
+      await this.getCodeRepository();
 
     if (!codeRepository.mainBranchName) {
       throw new BadDataException("Main Branch Name is required");
@@ -315,12 +624,13 @@ export default class CodeRepositoryUtil {
   }
 
   public static async getServicesToImproveCode(data: {
-    codeRepository: CodeRepositoryModel;
-    services: Array<ServiceRepository>;
+    codeRepository: CopilotCodeRepository;
+    serviceRepositories: Array<ServiceCopilotCodeRepository>;
+    openPullRequests: Array<CopilotPullRequest>;
   }): Promise<Array<ServiceToImproveResult>> {
     const servicesToImproveCode: Array<ServiceToImproveResult> = [];
 
-    for (const service of data.services) {
+    for (const service of data.serviceRepositories) {
       if (!data.codeRepository.mainBranchName) {
         throw new BadDataException("Main Branch Name is required");
       }
@@ -342,19 +652,18 @@ export default class CodeRepositoryUtil {
       if (
         data.codeRepository.repositoryHostedAt === CodeRepositoryType.GitHub
       ) {
-        const gitHuhbToken: string | null = GetGitHubToken();
+        const gitHuhbToken: string | null = GetCodeRepositoryPassword();
 
         if (!gitHuhbToken) {
           throw new BadDataException("GitHub Token is required");
         }
 
-        const pullRequestByService: Array<PullRequest> =
-          await this.getGitHubUtil().getPullRequestsByService({
-            serviceRepository: service,
-            pullRequestState: PullRequestState.Open,
-            baseBranchName: data.codeRepository.mainBranchName,
-            organizationName: data.codeRepository.organizationName,
-            repositoryName: data.codeRepository.repositoryName,
+        const pullRequestByService: Array<CopilotPullRequest> =
+          data.openPullRequests.filter((pullRequest: CopilotPullRequest) => {
+            return (
+              pullRequest.serviceRepositoryId?.toString() ===
+              service.id?.toString()
+            );
           });
 
         const numberOfPullRequestForThisService: number =
@@ -388,6 +697,8 @@ export default class CodeRepositoryUtil {
       return this.codeRepositoryResult;
     }
 
+    logger.info("Fetching Code Repository...");
+
     const repositorySecretKey: string | null = GetRepositorySecretKey();
 
     if (!repositorySecretKey) {
@@ -397,7 +708,7 @@ export default class CodeRepositoryUtil {
     const url: URL = URL.fromString(
       GetOneUptimeURL().toString() + "/api",
     ).addRoute(
-      `${new CodeRepositoryModel()
+      `${new CopilotCodeRepository()
         .getCrudApiPath()
         ?.toString()}/get-code-repository/${repositorySecretKey}`,
     );
@@ -409,18 +720,19 @@ export default class CodeRepositoryUtil {
       throw codeRepositoryResult;
     }
 
-    const codeRepository: CodeRepositoryModel = CodeRepositoryModel.fromJSON(
-      codeRepositoryResult.data["codeRepository"] as JSONObject,
-      CodeRepositoryModel,
-    ) as CodeRepositoryModel;
+    const codeRepository: CopilotCodeRepository =
+      CopilotCodeRepository.fromJSON(
+        codeRepositoryResult.data["codeRepository"] as JSONObject,
+        CopilotCodeRepository,
+      ) as CopilotCodeRepository;
 
-    const servicesRepository: Array<ServiceRepository> = (
+    const servicesRepository: Array<ServiceCopilotCodeRepository> = (
       codeRepositoryResult.data["servicesRepository"] as JSONArray
     ).map((serviceRepository: JSONObject) => {
-      return ServiceRepository.fromJSON(
+      return ServiceCopilotCodeRepository.fromJSON(
         serviceRepository,
-        ServiceRepository,
-      ) as ServiceRepository;
+        ServiceCopilotCodeRepository,
+      ) as ServiceCopilotCodeRepository;
     });
 
     if (!codeRepository) {
@@ -439,43 +751,27 @@ export default class CodeRepositoryUtil {
 
     logger.info("Services found in the repository:");
 
-    servicesRepository.forEach((serviceRepository: ServiceRepository) => {
-      logger.info(`- ${serviceRepository.serviceCatalog?.name}`);
-    });
+    servicesRepository.forEach(
+      (serviceRepository: ServiceCopilotCodeRepository) => {
+        logger.info(`- ${serviceRepository.serviceCatalog?.name}`);
+      },
+    );
 
     this.codeRepositoryResult = {
       codeRepository,
-      servicesToImprove: await this.getServicesToImproveCode({
-        codeRepository,
-        services: servicesRepository,
-      }),
       serviceRepositories: servicesRepository,
     };
 
     return this.codeRepositoryResult;
   }
 
-  public static async getCodeRepository(): Promise<CodeRepositoryModel> {
+  public static async getCodeRepository(): Promise<CopilotCodeRepository> {
     if (!this.codeRepositoryResult) {
       const result: CodeRepositoryResult = await this.getCodeRepositoryResult();
       return result.codeRepository;
     }
 
     return this.codeRepositoryResult.codeRepository;
-  }
-
-  public static async getServiceRepositories(): Promise<
-    Array<ServiceRepository>
-  > {
-    if (!this.codeRepositoryResult) {
-      this.codeRepositoryResult = await this.getCodeRepositoryResult();
-    }
-
-    return this.codeRepositoryResult.servicesToImprove.map(
-      (serviceToImprove: ServiceToImproveResult) => {
-        return serviceToImprove.serviceRepository;
-      },
-    );
   }
 
   public static getCodeFileExtentions(): Array<string> {

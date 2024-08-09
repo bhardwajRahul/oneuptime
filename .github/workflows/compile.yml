@@ -20,9 +20,6 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
-      - run: cd CommonUI && npm install --force
       - run: cd Accounts && npm install && npm run compile && npm run dep-check
 
   compile-isolated-vm:
@@ -35,34 +32,7 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd CommonServer && npm install
       - run: cd IsolatedVM && npm install && npm run compile && npm run dep-check
-
-  compile-common-server:
-    runs-on: ubuntu-latest
-    env:
-      CI_PIPELINE_ID: ${{github.run_number}}
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 18.3.0
-      - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install && npm run compile && npm run dep-check
-
-  compile-common-ui:
-    runs-on: ubuntu-latest
-    env:
-      CI_PIPELINE_ID: ${{github.run_number}}
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 18.3.0
-      - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonUI && npm install --force && npm run compile && npm run dep-check
 
   compile-common:
     runs-on: ubuntu-latest
@@ -73,8 +43,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 18.3.0
-      - run: cd Common && npm install
-      - run: cd Model && npm install && npm run compile && npm run dep-check
+      - run: cd Common && npm install && npm run compile && npm run dep-check
 
   compile-app:
     runs-on: ubuntu-latest
@@ -86,9 +55,7 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
-      - run: cd CommonUI && npm install --force
+      
       - run: cd App && npm install && npm run compile && npm run dep-check
 
   compile-copilot:
@@ -101,8 +68,6 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
       - run: cd Copilot && npm install && npm run compile && npm run dep-check
 
   compile-nginx:
@@ -115,9 +80,7 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
-      - run: cd CommonUI && npm install --force
+      
       - run: cd Nginx && npm install && npm run compile && npm run dep-check
 
   compile-infrastructure-agent:
@@ -141,9 +104,7 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
-      - run: cd CommonUI && npm install --force
+      
       - run: cd AdminDashboard && npm install && npm run compile && npm run dep-check
 
   compile-dashboard:
@@ -156,24 +117,9 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
-      - run: cd CommonUI && npm install --force
+      
       - run: cd Dashboard && npm install && npm run compile && npm run dep-check
 
-
-  compile-model:
-    runs-on: ubuntu-latest
-    env:
-      CI_PIPELINE_ID: ${{github.run_number}}
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 18.3.0
-      - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd Model && npm install && npm run compile && npm run dep-check
 
   compile-e2e:
     runs-on: ubuntu-latest
@@ -197,8 +143,6 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
       - run: cd Probe && npm install && npm run compile && npm run dep-check
 
   compile-ingestor:
@@ -211,8 +155,6 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
       - run: cd Ingestor && npm install && npm run compile && npm run dep-check
   
 
@@ -226,9 +168,7 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
-      - run: cd CommonUI && npm install --force
+      
       - run: cd StatusPage && npm install && npm run compile && npm run dep-check
 
   compile-test-server:
@@ -241,6 +181,4 @@ jobs:
         with:
           node-version: 18.3.0
       - run: cd Common && npm install
-      - run: cd Model && npm install
-      - run: cd CommonServer && npm install
       - run: cd TestServer && npm install && npm run compile && npm run dep-check

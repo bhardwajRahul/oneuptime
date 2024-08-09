@@ -3,12 +3,12 @@ import DisabledWarning from "../../../Components/Monitor/DisabledWarning";
 import IncomingMonitorLink from "../../../Components/Monitor/IncomingRequestMonitor/IncomingMonitorLink";
 import { MonitorCharts } from "../../../Components/Monitor/MonitorCharts/MonitorChart";
 import ServerMonitorDocumentation from "../../../Components/Monitor/ServerMonitor/Documentation";
-import Metrics from "../../../Components/Monitor/SummaryView/Summary";
+import Summary from "../../../Components/Monitor/SummaryView/Summary";
 import ProbeUtil from "../../../Utils/Probe";
 import PageComponentProps from "../../PageComponentProps";
 import InBetween from "Common/Types/BaseDatabase/InBetween";
 import SortOrder from "Common/Types/BaseDatabase/SortOrder";
-import { Black, Gray500, Green } from "Common/Types/BrandColors";
+import { Black, Gray500, Green, Red500 } from "Common/Types/BrandColors";
 import { LIMIT_PER_PROJECT } from "Common/Types/Database/LimitMax";
 import OneUptimeDate from "Common/Types/Date";
 import BadDataException from "Common/Types/Exception/BadDataException";
@@ -21,38 +21,39 @@ import IncomingMonitorRequest from "Common/Types/Monitor/IncomingMonitor/Incomin
 import MonitorType, {
   MonitorTypeHelper,
 } from "Common/Types/Monitor/MonitorType";
+import ServerMonitorResponse from "Common/Types/Monitor/ServerMonitor/ServerMonitorResponse";
 import ObjectID from "Common/Types/ObjectID";
-import Card from "CommonUI/src/Components/Card/Card";
+import Alert, { AlertType } from "Common/UI/Components/Alerts/Alert";
+import Card from "Common/UI/Components/Card/Card";
 import ChartGroup, {
   Chart,
-  ChartGroupInterval,
-} from "CommonUI/src/Components/Charts/ChartGroup/ChartGroup";
-import ErrorMessage from "CommonUI/src/Components/ErrorMessage/ErrorMessage";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import PageLoader from "CommonUI/src/Components/Loader/PageLoader";
-import CardModelDetail from "CommonUI/src/Components/ModelDetail/CardModelDetail";
-import MonitorUptimeGraph from "CommonUI/src/Components/MonitorGraphs/Uptime";
-import UptimeUtil from "CommonUI/src/Components/MonitorGraphs/UptimeUtil";
-import Statusbubble from "CommonUI/src/Components/StatusBubble/StatusBubble";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import { GetReactElementFunction } from "CommonUI/src/Types/FunctionTypes";
-import API from "CommonUI/src/Utils/API/API";
+} from "Common/UI/Components/Charts/ChartGroup/ChartGroup";
+import ErrorMessage from "Common/UI/Components/ErrorMessage/ErrorMessage";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import PageLoader from "Common/UI/Components/Loader/PageLoader";
+import CardModelDetail from "Common/UI/Components/ModelDetail/CardModelDetail";
+import MonitorUptimeGraph from "Common/UI/Components/MonitorGraphs/Uptime";
+import UptimeUtil from "Common/UI/Components/MonitorGraphs/UptimeUtil";
+import Statusbubble from "Common/UI/Components/StatusBubble/StatusBubble";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import { GetReactElementFunction } from "Common/UI/Types/FunctionTypes";
+import API from "Common/UI/Utils/API/API";
 import AnalyticsModelAPI, {
   ListResult as AnalyticsListResult,
-} from "CommonUI/src/Utils/AnalyticsModelAPI/AnalyticsModelAPI";
-import ModelAPI, { ListResult } from "CommonUI/src/Utils/ModelAPI/ModelAPI";
-import Navigation from "CommonUI/src/Utils/Navigation";
-import ProjectUtil from "CommonUI/src/Utils/Project";
-import MonitorMetricsByMinute from "Model/AnalyticsModels/MonitorMetricsByMinute";
-import Label from "Model/Models/Label";
-import Monitor from "Model/Models/Monitor";
+} from "Common/UI/Utils/AnalyticsModelAPI/AnalyticsModelAPI";
+import ModelAPI, { ListResult } from "Common/UI/Utils/ModelAPI/ModelAPI";
+import Navigation from "Common/UI/Utils/Navigation";
+import ProjectUtil from "Common/UI/Utils/Project";
+import MonitorMetricsByMinute from "Common/Models/AnalyticsModels/MonitorMetricsByMinute";
+import Label from "Common/Models/DatabaseModels/Label";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
 import MonitorProbe, {
   MonitorStepProbeResponse,
-} from "Model/Models/MonitorProbe";
-import MonitorStatus from "Model/Models/MonitorStatus";
-import MonitorStatusTimeline from "Model/Models/MonitorStatusTimeline";
-import Probe from "Model/Models/Probe";
-import { UptimePrecision } from "Model/Models/StatusPageResource";
+} from "Common/Models/DatabaseModels/MonitorProbe";
+import MonitorStatus from "Common/Models/DatabaseModels/MonitorStatus";
+import MonitorStatusTimeline from "Common/Models/DatabaseModels/MonitorStatusTimeline";
+import Probe from "Common/Models/DatabaseModels/Probe";
+import { UptimePrecision } from "Common/Models/DatabaseModels/StatusPageResource";
 import React, {
   Fragment,
   FunctionComponent,
@@ -60,6 +61,10 @@ import React, {
   useState,
 } from "react";
 import useAsyncEffect from "use-async-effect";
+import RouteMap, { RouteUtil } from "../../../Utils/RouteMap";
+import PageMap from "../../../Utils/PageMap";
+import LogMonitorPreview from "../../../Components/Monitor/LogMonitor/LogMonitorPreview";
+import TraceMonitorPreview from "../../../Components/Monitor/TraceMonitor/TraceMonitorPreview";
 
 const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
   const modelId: ObjectID = Navigation.getLastParamAsObjectID();
@@ -99,6 +104,10 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
 
   const [incomingMonitorRequest, setIncomingMonitorRequest] = useState<
     IncomingMonitorRequest | undefined
+  >(undefined);
+
+  const [serverMonitorResponse, setServerMonitorResponse] = useState<
+    ServerMonitorResponse | undefined
   >(undefined);
 
   const getUptimePercent: () => ReactElement = (): ReactElement => {
@@ -174,6 +183,12 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
           serverMonitorRequestReceivedAt: true,
           incomingRequestReceivedAt: true,
           incomingMonitorRequest: true,
+          serverMonitorResponse: true,
+          isNoProbeEnabledOnThisMonitor: true,
+          isAllProbesDisconnectedFromThisMonitor: true,
+          telemetryMonitorLastMonitorAt: true,
+          telemetryMonitorNextMonitorAt: true,
+          monitorSteps: true,
         },
       });
 
@@ -181,6 +196,10 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
 
       if (item?.incomingMonitorRequest) {
         setIncomingMonitorRequest(item.incomingMonitorRequest);
+      }
+
+      if (item?.serverMonitorResponse) {
+        setServerMonitorResponse(item.serverMonitorResponse);
       }
 
       const monitorStatuses: ListResult<MonitorStatus> = await ModelAPI.getList(
@@ -254,7 +273,7 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
       setMonitorMetricsByMinute(monitorMetricsByMinute.data.reverse());
 
       const isMonitoredByProbe: boolean = item.monitorType
-        ? MonitorTypeHelper.isProbableMonitors(item.monitorType)
+        ? MonitorTypeHelper.isProbableMonitor(item.monitorType)
         : false;
 
       if (isMonitoredByProbe) {
@@ -328,9 +347,7 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
         probes: probes,
       });
 
-      return (
-        <ChartGroup interval={ChartGroupInterval.ONE_HOUR} charts={charts} />
-      );
+      return <ChartGroup charts={charts} />;
     };
 
   if (isLoading) {
@@ -343,6 +360,48 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
 
   return (
     <Fragment>
+      {monitor && monitor.isAllProbesDisconnectedFromThisMonitor && (
+        <Alert
+          type={AlertType.DANGER}
+          className="cursor-pointer"
+          onClick={() => {
+            Navigation.navigate(
+              RouteUtil.populateRouteParams(
+                RouteMap[PageMap.MONITOR_VIEW_PROBES]!,
+                {
+                  modelId: modelId,
+                },
+              ),
+            );
+          }}
+          strongTitle="Probes Disconnected"
+          title={
+            "This monitor is not being monitored because all probes are disconnected. Please click here to check probes for this monitor."
+          }
+        />
+      )}
+
+      {monitor && monitor.isNoProbeEnabledOnThisMonitor && (
+        <Alert
+          type={AlertType.DANGER}
+          className="cursor-pointer"
+          onClick={() => {
+            Navigation.navigate(
+              RouteUtil.populateRouteParams(
+                RouteMap[PageMap.MONITOR_VIEW_PROBES]!,
+                {
+                  modelId: modelId,
+                },
+              ),
+            );
+          }}
+          strongTitle="Probes Not Enabled"
+          title={
+            "This monitor is not being monitored because all probes are disabled for this monitor. Please click here to check probes for this monitor."
+          }
+        />
+      )}
+
       <DisabledWarning monitorId={modelId} />
 
       {/* Monitor View  */}
@@ -408,6 +467,8 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
         modelDetailProps={{
           selectMoreFields: {
             disableActiveMonitoring: true,
+            isNoProbeEnabledOnThisMonitor: true,
+            isAllProbesDisconnectedFromThisMonitor: true,
           },
           showDetailsInNumberOfColumns: 2,
           modelType: Monitor,
@@ -445,6 +506,26 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
                       color={Gray500}
                       text={"Disabled"}
                       shouldAnimate={false}
+                    />
+                  );
+                }
+
+                if (item && item.isNoProbeEnabledOnThisMonitor) {
+                  return (
+                    <Statusbubble
+                      shouldAnimate={false}
+                      color={Red500}
+                      text={"Probes Not Enabled"}
+                    />
+                  );
+                }
+
+                if (item && item.isAllProbesDisconnectedFromThisMonitor) {
+                  return (
+                    <Statusbubble
+                      shouldAnimate={false}
+                      color={Red500}
+                      text={"Probes Disconnected"}
                     />
                   );
                 }
@@ -524,12 +605,59 @@ const MonitorView: FunctionComponent<PageComponentProps> = (): ReactElement => {
         />
       </Card>
 
-      <Metrics
+      <Summary
         monitorType={monitorType!}
         probes={probes}
         incomingMonitorRequest={incomingMonitorRequest}
         probeMonitorResponses={probeResponses}
+        serverMonitorResponse={serverMonitorResponse}
+        telemetryMonitorSummary={{
+          lastCheckedAt: monitor?.telemetryMonitorLastMonitorAt,
+          nextCheckAt: monitor?.telemetryMonitorNextMonitorAt,
+        }}
       />
+
+      {monitor?.monitorType === MonitorType.Logs &&
+        monitor.monitorSteps &&
+        monitor.monitorSteps.data?.monitorStepsInstanceArray &&
+        monitor.monitorSteps.data?.monitorStepsInstanceArray.length > 0 && (
+          <div>
+            <Card
+              title={"Logs Preview"}
+              description={
+                "Preview of the logs that match the filter of this monitor."
+              }
+            >
+              <LogMonitorPreview
+                monitorStepLogMonitor={
+                  monitor.monitorSteps.data?.monitorStepsInstanceArray[0]?.data
+                    ?.logMonitor
+                }
+              />
+            </Card>
+          </div>
+        )}
+
+      {monitor?.monitorType === MonitorType.Traces &&
+        monitor.monitorSteps &&
+        monitor.monitorSteps.data?.monitorStepsInstanceArray &&
+        monitor.monitorSteps.data?.monitorStepsInstanceArray.length > 0 && (
+          <div>
+            <Card
+              title={"Spans Preview"}
+              description={
+                "Preview of the spans that match the filter of this monitor."
+              }
+            >
+              <TraceMonitorPreview
+                monitorStepTraceMonitor={
+                  monitor.monitorSteps.data?.monitorStepsInstanceArray[0]?.data
+                    ?.traceMonitor
+                }
+              />
+            </Card>
+          </div>
+        )}
 
       {shouldFetchMonitorMetrics && getMonitorMetricsChartGroup()}
     </Fragment>

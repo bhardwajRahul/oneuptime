@@ -6,10 +6,10 @@ import CopilotActionBase, {
   CopilotProcess,
 } from "./CopilotActionsBase";
 import BadDataException from "Common/Types/Exception/BadDataException";
-import CodeRepositoryUtil from "../../Utils/CodeRepository";
-import ServiceRepository from "Model/Models/ServiceRepository";
+import CodeRepositoryUtil, { RepoScriptType } from "../../Utils/CodeRepository";
+import ServiceCopilotCodeRepository from "Common/Models/DatabaseModels/ServiceCopilotCodeRepository";
 import PullRequest from "Common/Types/CodeRepository/PullRequest";
-import CopilotAction from "Model/Models/CopilotAction";
+import CopilotAction from "Common/Models/DatabaseModels/CopilotAction";
 import ObjectID from "Common/Types/ObjectID";
 import CopilotActionStatus from "Common/Types/Copilot/CopilotActionStatus";
 import URL from "Common/Types/API/URL";
@@ -18,11 +18,13 @@ import HTTPErrorResponse from "Common/Types/API/HTTPErrorResponse";
 import HTTPResponse from "Common/Types/API/HTTPResponse";
 import { JSONObject } from "Common/Types/JSON";
 import API from "Common/Utils/API";
-import logger from "CommonServer/Utils/Logger";
+import logger from "Common/Server/Utils/Logger";
 import FixGrammarAndSpelling from "./FixGrammarAndSpelling";
 import RefactorCode from "./RefactorCode";
 import WriteUnitTests from "./WriteUnitTests";
 import ImproveReadme from "./ImroveReadme";
+import CopilotPullRequest from "Common/Models/DatabaseModels/CopilotPullRequest";
+import CopilotPullRequestService from "../CopilotPullRequest";
 
 const actionDictionary: Dictionary<typeof CopilotActionBase> = {
   [CopilotActionType.IMPROVE_COMMENTS]: ImproveComments,
@@ -39,10 +41,12 @@ export interface CopilotExecutionResult {
 
 export default class CopilotActionService {
   public static async execute(data: {
-    serviceRepository: ServiceRepository;
+    serviceRepository: ServiceCopilotCodeRepository;
     copilotActionType: CopilotActionType;
     input: CopilotActionVars;
   }): Promise<CopilotExecutionResult> {
+    await CodeRepositoryUtil.discardAllChangesOnCurrentBranch();
+
     await CodeRepositoryUtil.switchToMainBranch();
 
     await CodeRepositoryUtil.pullChanges();
@@ -81,41 +85,61 @@ export default class CopilotActionService {
 
       const branchName: string = CodeRepositoryUtil.getBranchName({
         branchName: await action.getBranchName(),
-        serviceRepository: data.serviceRepository,
       });
 
       // create a branch
 
       await CodeRepositoryUtil.createBranch({
-        serviceRepository: data.serviceRepository,
         branchName: branchName,
       });
 
       // write all the modified files.
-
       const filePaths: string[] = Object.keys(processResult.result.files);
 
-      for (const filePath in processResult.result.files) {
-        const fileCommitHash: string =
-          processResult.result.files[filePath]!.gitCommitHash;
+      // run on before commit script. This is the place where we can run tests.
 
-        logger.info(`Writing file: ${filePath}`);
-        logger.info(`Commit Hash: ${fileCommitHash}`);
-
-        const code: string = processResult.result.files[filePath]!.fileContent;
-
-        await CodeRepositoryUtil.writeToFile({
-          filePath: filePath,
-          content: code,
+      const onBeforeCommitScript: string | null =
+        await CodeRepositoryUtil.getRepoScript({
+          scriptType: RepoScriptType.OnBeforeCommit,
         });
+
+      if (!onBeforeCommitScript) {
+        logger.debug("No on-before-commit script found for this repository.");
+      } else {
+        logger.info("Executing on-before-commit script.");
+        await CodeRepositoryUtil.executeScript({
+          script: onBeforeCommitScript,
+        });
+        logger.info("on-before-commit script executed successfully.");
       }
 
       const commitMessage: string =
         await action.getCommitMessage(processResult);
 
+      const onAfterCommitScript: string | null =
+        await CodeRepositoryUtil.getRepoScript({
+          scriptType: RepoScriptType.OnAfterCommit,
+        });
+
+      if (!onAfterCommitScript) {
+        logger.debug("No on-after-commit script found for this repository.");
+      }
+
+      if (onAfterCommitScript) {
+        logger.info("Executing on-after-commit script.");
+        await CodeRepositoryUtil.executeScript({
+          script: onAfterCommitScript,
+        });
+        logger.info("on-after-commit script executed successfully.");
+      }
+
       // add files to stage
 
-      logger.info("Adding files to stage");
+      logger.info("Adding files to stage: ");
+
+      for (const filePath of filePaths) {
+        logger.info(`- ${filePath}`);
+      }
 
       await CodeRepositoryUtil.addFilesToGit({
         filePaths: filePaths,
@@ -131,14 +155,12 @@ export default class CopilotActionService {
       logger.info("Pushing changes");
       await CodeRepositoryUtil.pushChanges({
         branchName: branchName,
-        serviceRepository: data.serviceRepository,
       });
 
       // create a PR
       logger.info("Creating a PR");
       pullRequest = await CodeRepositoryUtil.createPullRequest({
         branchName: branchName,
-        serviceRepository: data.serviceRepository,
         title: await action.getPullRequestTitle(processResult),
         body: await action.getPullRequestBody(processResult),
       });
@@ -171,7 +193,7 @@ export default class CopilotActionService {
       throw new BadDataException("File commit hash not found");
     }
 
-    await CopilotActionService.addCopilotAction({
+    await CopilotActionService.addCopilotActionToDatabase({
       serviceCatalogId: data.serviceRepository.serviceCatalog!.id!,
       serviceRepositoryId: data.serviceRepository.id!,
       filePath: data.input.currentFilePath,
@@ -184,7 +206,7 @@ export default class CopilotActionService {
     return executionResult;
   }
 
-  private static async addCopilotAction(data: {
+  private static async addCopilotActionToDatabase(data: {
     serviceCatalogId: ObjectID;
     serviceRepositoryId: ObjectID;
     filePath: string;
@@ -195,6 +217,17 @@ export default class CopilotActionService {
   }): Promise<void> {
     // add copilot action to the database.
 
+    let copilotPullRequest: CopilotPullRequest | null = null;
+
+    if (data.pullRequest) {
+      copilotPullRequest =
+        await CopilotPullRequestService.addPullRequestToDatabase({
+          pullRequest: data.pullRequest,
+          serviceCatalogId: data.serviceCatalogId,
+          serviceRepositoryId: data.serviceRepositoryId,
+        });
+    }
+
     const copilotAction: CopilotAction = new CopilotAction();
 
     copilotAction.serviceCatalogId = data.serviceCatalogId;
@@ -204,9 +237,8 @@ export default class CopilotActionService {
     copilotAction.copilotActionType = data.copilotActionType;
     copilotAction.copilotActionStatus = data.copilotActionStatus;
 
-    if (data.pullRequest && data.pullRequest.pullRequestNumber) {
-      copilotAction.pullRequestId =
-        data.pullRequest?.pullRequestNumber.toString();
+    if (copilotPullRequest) {
+      copilotAction.copilotPullRequestId = copilotPullRequest.id!;
     }
 
     // send this to the API.
@@ -221,6 +253,9 @@ export default class CopilotActionService {
     const codeRepositoryResult: HTTPErrorResponse | HTTPResponse<JSONObject> =
       await API.post(url, {
         copilotAction: CopilotAction.toJSON(copilotAction, CopilotAction),
+        copilotPullRequest: copilotPullRequest
+          ? CopilotPullRequest.toJSON(copilotPullRequest, CopilotPullRequest)
+          : null,
       });
 
     if (codeRepositoryResult instanceof HTTPErrorResponse) {

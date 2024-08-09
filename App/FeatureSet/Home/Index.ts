@@ -10,16 +10,18 @@ import OneUptimeDate from "Common/Types/Date";
 import Dictionary from "Common/Types/Dictionary";
 import { JSONObject } from "Common/Types/JSON";
 import API from "Common/Utils/API";
-import FeatureSet from "CommonServer/Types/FeatureSet";
+import FeatureSet from "Common/Server/Types/FeatureSet";
 import Express, {
   ExpressApplication,
   ExpressRequest,
   ExpressResponse,
   ExpressStatic,
-} from "CommonServer/Utils/Express";
+} from "Common/Server/Utils/Express";
 import "ejs";
 import builder from "xmlbuilder2";
 import { XMLBuilder } from "xmlbuilder2/lib/interfaces";
+import OSSFriends, { OSSFriend } from "./Utils/OSSFriends";
+import Reviews from "./Utils/Reviews";
 
 const HomeFeatureSet: FeatureSet = {
   init: async (): Promise<void> => {
@@ -27,12 +29,17 @@ const HomeFeatureSet: FeatureSet = {
 
     //Routes
     app.get("/", (_req: ExpressRequest, res: ExpressResponse) => {
+      const { reviewsList1, reviewsList2, reviewsList3 } = Reviews;
+
       res.render(`${ViewsPath}/index`, {
         support: false,
         footerCards: true,
         cta: true,
         blackLogo: false,
         requestDemoCta: false,
+        reviewsList1,
+        reviewsList2,
+        reviewsList3,
       });
     });
 
@@ -49,6 +56,20 @@ const HomeFeatureSet: FeatureSet = {
     app.get("/support", async (_req: ExpressRequest, res: ExpressResponse) => {
       res.render(`${ViewsPath}/support`);
     });
+
+    app.get(
+      "/oss-friends",
+      async (_req: ExpressRequest, res: ExpressResponse) => {
+        res.render(`${ViewsPath}/oss-friends`, {
+          ossFriends: OSSFriends.map((friend: OSSFriend) => {
+            return {
+              ...friend,
+              repositoryUrl: friend.repositoryUrl.toString(),
+            };
+          }),
+        });
+      },
+    );
 
     app.get("/pricing", (_req: ExpressRequest, res: ExpressResponse) => {
       const pricing: Array<JSONObject> = [

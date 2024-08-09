@@ -10,13 +10,13 @@ import StatusServiceHandler from "./Service/Status";
 import { StaticPath } from "./Utils/Config";
 import ResourceUtil, { ModelDocumentation } from "./Utils/Resources";
 import Dictionary from "Common/Types/Dictionary";
-import FeatureSet from "CommonServer/Types/FeatureSet";
+import FeatureSet from "Common/Server/Types/FeatureSet";
 import Express, {
   ExpressApplication,
   ExpressRequest,
   ExpressResponse,
   ExpressStatic,
-} from "CommonServer/Utils/Express";
+} from "Common/Server/Utils/Express";
 
 const APIReferenceFeatureSet: FeatureSet = {
   init: async (): Promise<void> => {
@@ -25,13 +25,15 @@ const APIReferenceFeatureSet: FeatureSet = {
 
     const app: ExpressApplication = Express.getExpressApp();
 
+    // Serve static files for the API reference with a cache max age of 30 days
     app.use("/reference", ExpressStatic(StaticPath, { maxAge: 2592000 }));
 
-    // Index page
+    // Redirect index page to the introduction page
     app.get(["/reference"], (_req: ExpressRequest, res: ExpressResponse) => {
       return res.redirect("/reference/introduction");
     });
 
+    // Handle "Page Not Found" page
     app.get(
       ["/reference/page-not-found"],
       (req: ExpressRequest, res: ExpressResponse) => {
@@ -39,7 +41,7 @@ const APIReferenceFeatureSet: FeatureSet = {
       },
     );
 
-    // All Pages
+    // Handle all other pages based on the "page" parameter
     app.get(
       ["/reference/:page"],
       (req: ExpressRequest, res: ExpressResponse) => {
@@ -52,6 +54,7 @@ const APIReferenceFeatureSet: FeatureSet = {
         const currentResource: ModelDocumentation | undefined =
           ResourceDictionary[page];
 
+        // Execute the appropriate service handler based on the "page" parameter
         if (req.params["page"] === "permissions") {
           return PermissionServiceHandler.executeResponse(req, res);
         } else if (req.params["page"] === "authentication") {

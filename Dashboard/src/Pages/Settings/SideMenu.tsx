@@ -2,10 +2,10 @@ import PageMap from "../../Utils/PageMap";
 import RouteMap, { RouteUtil } from "../../Utils/RouteMap";
 import Route from "Common/Types/API/Route";
 import IconProp from "Common/Types/Icon/IconProp";
-import SideMenu from "CommonUI/src/Components/SideMenu/SideMenu";
-import SideMenuItem from "CommonUI/src/Components/SideMenu/SideMenuItem";
-import SideMenuSection from "CommonUI/src/Components/SideMenu/SideMenuSection";
-import { BILLING_ENABLED } from "CommonUI/src/Config";
+import SideMenu from "Common/UI/Components/SideMenu/SideMenu";
+import SideMenuItem from "Common/UI/Components/SideMenu/SideMenuItem";
+import SideMenuSection from "Common/UI/Components/SideMenu/SideMenuSection";
+import { BILLING_ENABLED } from "Common/UI/Config";
 import React, { ReactElement } from "react";
 
 const DashboardSideMenu: () => JSX.Element = (): ReactElement => {
@@ -139,6 +139,17 @@ const DashboardSideMenu: () => JSX.Element = (): ReactElement => {
                     }}
                     icon={IconProp.TextFile}
                 /> */}
+      </SideMenuSection>
+      <SideMenuSection title="Telemetry & APM">
+        <SideMenuItem
+          link={{
+            title: "Ingestion Keys",
+            to: RouteUtil.populateRouteParams(
+              RouteMap[PageMap.SETTINGS_TELEMETRY_INGESTION_KEYS] as Route,
+            ),
+          }}
+          icon={IconProp.Terminal}
+        />
       </SideMenuSection>
       <SideMenuSection title="Scheduled Maintenance">
         <SideMenuItem

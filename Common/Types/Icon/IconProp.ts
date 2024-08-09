@@ -6,6 +6,7 @@ enum IconProp {
   TableCells = "TableCells",
   Layout = "Layout",
   Compass = "Compass",
+  ShieldCheck = "ShieldCheck",
   User = "User",
   Disc = "Disc",
   Settings = "Settings",
@@ -121,6 +122,9 @@ enum IconProp {
   Minus = "Minus",
   MinusSmall = "MinusSmall",
   Template = "Template",
+  NoSignal = "NoSignal",
+  EyeSlash = "EyeSlash",
+  SquareStack3D = "SquareStack3D",
 }
 
 export default IconProp;

@@ -1,5 +1,5 @@
-import AnalyticsBaseModel from "../AnalyticsModels/BaseModel";
-import BaseModel from "../Models/BaseModel";
+import AnalyticsBaseModel from "../Models/AnalyticsModels/AnalyticsBaseModel/AnalyticsBaseModel";
+import BaseModel from "../Models/DatabaseModels/DatabaseBaseModel/DatabaseBaseModel";
 import HTTPErrorResponse from "../Types/API/HTTPErrorResponse";
 import HTTPMethod from "../Types/API/HTTPMethod";
 import HTTPResponse from "../Types/API/HTTPResponse";
@@ -12,6 +12,12 @@ import Dictionary from "../Types/Dictionary";
 import APIException from "../Types/Exception/ApiException";
 import { JSONArray, JSONObject } from "../Types/JSON";
 import axios, { AxiosError, AxiosResponse } from "axios";
+import Sleep from "../Types/Sleep";
+
+export interface RequestOptions {
+  retries?: number | undefined;
+  exponentialBackoff?: boolean | undefined;
+}
 
 export default class API {
   private _protocol: Protocol = Protocol.HTTPS;
@@ -59,11 +65,13 @@ export default class API {
     path: Route,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
     return await API.get<T>(
       new URL(this.protocol, this.hostname, this.baseRoute.addRoute(path)),
       data,
       headers,
+      options,
     );
   }
 
@@ -73,11 +81,13 @@ export default class API {
     path: Route,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
     return await API.delete<T>(
       new URL(this.protocol, this.hostname, this.baseRoute.addRoute(path)),
       data,
       headers,
+      options,
     );
   }
 
@@ -87,11 +97,13 @@ export default class API {
     path: Route,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
     return await API.head<T>(
       new URL(this.protocol, this.hostname, this.baseRoute.addRoute(path)),
       data,
       headers,
+      options,
     );
   }
 
@@ -101,11 +113,13 @@ export default class API {
     path: Route,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
     return await API.put<T>(
       new URL(this.protocol, this.hostname, this.baseRoute.addRoute(path)),
       data,
       headers,
+      options,
     );
   }
 
@@ -115,11 +129,13 @@ export default class API {
     path: Route,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
     return await API.post<T>(
       new URL(this.protocol, this.hostname, this.baseRoute.addRoute(path)),
       data,
       headers,
+      options,
     );
   }
 
@@ -170,8 +186,16 @@ export default class API {
     url: URL,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
-    return await this.fetch<T>(HTTPMethod.GET, url, data, headers);
+    return await this.fetch<T>(
+      HTTPMethod.GET,
+      url,
+      data,
+      headers,
+      undefined,
+      options,
+    );
   }
 
   public static async delete<
@@ -186,8 +210,16 @@ export default class API {
     url: URL,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
-    return await this.fetch(HTTPMethod.DELETE, url, data, headers);
+    return await this.fetch(
+      HTTPMethod.DELETE,
+      url,
+      data,
+      headers,
+      undefined,
+      options,
+    );
   }
 
   public static async head<
@@ -202,8 +234,16 @@ export default class API {
     url: URL,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
-    return await this.fetch(HTTPMethod.HEAD, url, data, headers);
+    return await this.fetch(
+      HTTPMethod.HEAD,
+      url,
+      data,
+      headers,
+      undefined,
+      options,
+    );
   }
 
   public static async put<
@@ -218,8 +258,16 @@ export default class API {
     url: URL,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
-    return await this.fetch(HTTPMethod.PUT, url, data, headers);
+    return await this.fetch(
+      HTTPMethod.PUT,
+      url,
+      data,
+      headers,
+      undefined,
+      options,
+    );
   }
 
   public static async post<
@@ -234,8 +282,16 @@ export default class API {
     url: URL,
     data?: JSONObject | JSONArray,
     headers?: Headers,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
-    return await this.fetch(HTTPMethod.POST, url, data, headers);
+    return await this.fetch(
+      HTTPMethod.POST,
+      url,
+      data,
+      headers,
+      undefined,
+      options,
+    );
   }
 
   public static async fetch<
@@ -252,6 +308,7 @@ export default class API {
     data?: JSONObject | JSONArray,
     headers?: Headers,
     params?: Dictionary<string>,
+    options?: RequestOptions,
   ): Promise<HTTPResponse<T> | HTTPErrorResponse> {
     const apiHeaders: Headers = this.getHeaders(headers);
 
@@ -277,12 +334,39 @@ export default class API {
         finalBody = new URLSearchParams(data as Dictionary<string>);
       }
 
-      const result: AxiosResponse = await axios({
-        method: method,
-        url: url.toString(),
-        headers: finalHeaders,
-        data: finalBody,
-      });
+      let currentRetry: number = 0;
+      const maxRetries: number = options?.retries || 0;
+      const exponentialBackoff: boolean = options?.exponentialBackoff || false;
+
+      let result: AxiosResponse | null = null;
+
+      while (currentRetry <= maxRetries) {
+        currentRetry++;
+        try {
+          result = await axios({
+            method: method,
+            url: url.toString(),
+            headers: finalHeaders,
+            data: finalBody,
+          });
+
+          break;
+        } catch (e) {
+          if (currentRetry <= maxRetries) {
+            if (exponentialBackoff) {
+              await Sleep.sleep(2 ** currentRetry * 1000);
+            }
+
+            continue;
+          } else {
+            throw e;
+          }
+        }
+      }
+
+      if (!result) {
+        throw new APIException("No response received from server.");
+      }
 
       result.headers = await this.onResponseSuccessHeaders(
         result.headers as Dictionary<string>,
@@ -322,7 +406,10 @@ export default class API {
     // get url from error
     const url: string = error?.config?.url || "";
 
-    throw new APIException(`URL ${url ? url + " " : ""}is not available.`);
+    throw new APIException(
+      `Error occurred while making request to ${url}.`,
+      error,
+    );
   }
 
   public static getFriendlyErrorMessage(error: AxiosError | Error): string {

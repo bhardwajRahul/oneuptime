@@ -1,3 +1,4 @@
+import ServerMonitorResponse from "Common/Types/Monitor/ServerMonitor/ServerMonitorResponse";
 import ProbePicker from "./ProbePicker";
 import SummaryInfo from "./SummaryInfo";
 import IncomingMonitorRequest from "Common/Types/Monitor/IncomingMonitor/IncomingMonitorRequest";
@@ -5,16 +6,19 @@ import MonitorType, {
   MonitorTypeHelper,
 } from "Common/Types/Monitor/MonitorType";
 import ProbeMonitorResponse from "Common/Types/Probe/ProbeMonitorResponse";
-import Card from "CommonUI/src/Components/Card/Card";
-import { MonitorStepProbeResponse } from "Model/Models/MonitorProbe";
-import Probe from "Model/Models/Probe";
+import Card from "Common/UI/Components/Card/Card";
+import { MonitorStepProbeResponse } from "Common/Models/DatabaseModels/MonitorProbe";
+import Probe from "Common/Models/DatabaseModels/Probe";
 import React, { FunctionComponent, ReactElement, useEffect } from "react";
+import TelemetryMonitorSummary from "./Types/TelemetryMonitorSummary";
 
 export interface ComponentProps {
   probeMonitorResponses?: Array<MonitorStepProbeResponse> | undefined;
   incomingMonitorRequest?: IncomingMonitorRequest | undefined;
+  serverMonitorResponse?: ServerMonitorResponse | undefined;
   probes?: Array<Probe>;
   monitorType: MonitorType;
+  telemetryMonitorSummary?: TelemetryMonitorSummary | undefined;
 }
 
 const Summary: FunctionComponent<ComponentProps> = (
@@ -52,16 +56,12 @@ const Summary: FunctionComponent<ComponentProps> = (
     }
   }
 
-  if (props.monitorType === MonitorType.Server) {
-    return <></>;
-  }
-
   return (
     <Card
       title="Monitor Summary"
       description="Here is how your monitor is performing at this moment."
       rightElement={
-        MonitorTypeHelper.isProbableMonitors(props.monitorType) &&
+        MonitorTypeHelper.isProbableMonitor(props.monitorType) &&
         props.probes &&
         props.probes.length > 0 &&
         selectedProbe ? (
@@ -82,6 +82,8 @@ const Summary: FunctionComponent<ComponentProps> = (
           monitorType={props.monitorType}
           probeMonitorResponses={probeResponses}
           incomingMonitorRequest={props.incomingMonitorRequest}
+          serverMonitorResponse={props.serverMonitorResponse}
+          telemetryMonitorSummary={props.telemetryMonitorSummary}
         />
       </div>
     </Card>

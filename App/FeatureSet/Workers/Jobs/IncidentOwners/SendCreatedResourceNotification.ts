@@ -8,17 +8,17 @@ import EmailTemplateType from "Common/Types/Email/EmailTemplateType";
 import NotificationSettingEventType from "Common/Types/NotificationSetting/NotificationSettingEventType";
 import { SMSMessage } from "Common/Types/SMS/SMS";
 import { EVERY_MINUTE } from "Common/Utils/CronTime";
-import IncidentService from "CommonServer/Services/IncidentService";
-import ProjectService from "CommonServer/Services/ProjectService";
-import UserNotificationSettingService from "CommonServer/Services/UserNotificationSettingService";
-import Select from "CommonServer/Types/Database/Select";
-import Markdown, { MarkdownContentType } from "CommonServer/Types/Markdown";
-import logger from "CommonServer/Utils/Logger";
-import Incident from "Model/Models/Incident";
-import IncidentState from "Model/Models/IncidentState";
-import Monitor from "Model/Models/Monitor";
-import Project from "Model/Models/Project";
-import User from "Model/Models/User";
+import IncidentService from "Common/Server/Services/IncidentService";
+import ProjectService from "Common/Server/Services/ProjectService";
+import UserNotificationSettingService from "Common/Server/Services/UserNotificationSettingService";
+import Select from "Common/Server/Types/Database/Select";
+import Markdown, { MarkdownContentType } from "Common/Server/Types/Markdown";
+import logger from "Common/Server/Utils/Logger";
+import Incident from "Common/Models/DatabaseModels/Incident";
+import IncidentState from "Common/Models/DatabaseModels/IncidentState";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
+import Project from "Common/Models/DatabaseModels/Project";
+import User from "Common/Models/DatabaseModels/User";
 
 RunCron(
   "IncidentOwner:SendCreatedResourceEmail",

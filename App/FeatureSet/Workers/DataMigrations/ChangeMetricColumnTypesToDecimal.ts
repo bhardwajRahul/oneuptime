@@ -1,8 +1,8 @@
 import DataMigrationBase from "./DataMigrationBase";
 import AnalyticsTableColumn from "Common/Types/AnalyticsDatabase/TableColumn";
 import TableColumnType from "Common/Types/AnalyticsDatabase/TableColumnType";
-import MetricService from "CommonServer/Services/MetricService";
-import Metric from "Model/AnalyticsModels/Metric";
+import MetricService from "Common/Server/Services/MetricService";
+import Metric from "Common/Models/AnalyticsModels/Metric";
 
 export default class ChangeMetricColumnTypeToDecimal extends DataMigrationBase {
   public constructor() {

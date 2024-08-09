@@ -1,12 +1,12 @@
 import DashboardNavigation from "../../Utils/Navigation";
 import PageComponentProps from "../PageComponentProps";
 import NotificationSettingEventType from "Common/Types/NotificationSetting/NotificationSettingEventType";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import ModelTable from "CommonUI/src/Components/ModelTable/ModelTable";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import DropdownUtil from "CommonUI/src/Utils/Dropdown";
-import User from "CommonUI/src/Utils/User";
-import UserNotificationSetting from "Model/Models/UserNotificationSetting";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import ModelTable from "Common/UI/Components/ModelTable/ModelTable";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import DropdownUtil from "Common/UI/Utils/Dropdown";
+import User from "Common/UI/Utils/User";
+import UserNotificationSetting from "Common/Models/DatabaseModels/UserNotificationSetting";
 import React, { Fragment, FunctionComponent, ReactElement } from "react";
 
 const Settings: FunctionComponent<PageComponentProps> = (): ReactElement => {
@@ -151,6 +151,8 @@ const Settings: FunctionComponent<PageComponentProps> = (): ReactElement => {
             NotificationSettingEventType.SEND_MONITOR_OWNER_ADDED_NOTIFICATION,
             NotificationSettingEventType.SEND_MONITOR_CREATED_OWNER_NOTIFICATION,
             NotificationSettingEventType.SEND_MONITOR_STATUS_CHANGED_OWNER_NOTIFICATION,
+            NotificationSettingEventType.SEND_MONITOR_NOTIFICATION_WHEN_NO_PROBES_ARE_MONITORING_THE_MONITOR,
+            NotificationSettingEventType.SEND_MONITOR_NOTIFICATION_WHEN_PORBE_STATUS_CHANGES,
           ],
           title: "Monitor Notifications",
           description:
@@ -182,6 +184,18 @@ const Settings: FunctionComponent<PageComponentProps> = (): ReactElement => {
           title: "Scheduled Maintenance Notifications",
           description:
             "Here are the list of notification methods we will use when an event happens on an incident.",
+        })}
+      </div>
+
+      <div>
+        {getModelTable({
+          eventOptions: [
+            NotificationSettingEventType.SEND_PROBE_STATUS_CHANGED_OWNER_NOTIFICATION,
+            NotificationSettingEventType.SEND_PROBE_OWNER_ADDED_NOTIFICATION,
+          ],
+          title: "Probe Notifications",
+          description:
+            "Here are the list of notification methods we will use when an event happens on a custom probe.",
         })}
       </div>
     </Fragment>

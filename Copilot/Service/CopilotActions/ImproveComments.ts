@@ -5,9 +5,10 @@ import CopilotActionBase, {
   PromptRole,
 } from "./CopilotActionsBase";
 import CodeRepositoryUtil from "../../Utils/CodeRepository";
-import ServiceLanguage from "Common/Types/ServiceCatalog/ServiceLanguage";
+import TechStack from "Common/Types/ServiceCatalog/TechStack";
 import { CopilotPromptResult } from "../LLM/LLMBase";
-import CodeRepositoryFile from "CommonServer/Utils/CodeRepository/CodeRepositoryFile";
+import CodeRepositoryFile from "Common/Server/Utils/CodeRepository/CodeRepositoryFile";
+import Text from "Common/Types/Text";
 
 export default class ImproveComments extends CopilotActionBase {
   public isRequirementsMet: boolean = false;
@@ -22,34 +23,41 @@ export default class ImproveComments extends CopilotActionBase {
     return Promise.resolve(this.isRequirementsMet);
   }
 
-  public override async onExecutionStep(
-    data: CopilotProcess,
-  ): Promise<CopilotProcess> {
-    // Action Prompt
+  public async commentCodePart(options: {
+    data: CopilotProcess;
+    codePart: string;
+    currentRetryCount: number;
+    maxRetryCount: number;
+  }): Promise<{
+    newCode: string;
+    isWellCommented: boolean;
+  }> {
+    let isWellCommented: boolean = true;
 
-    const actionPrompt: CopilotActionPrompt = await this.getPrompt(data);
+    const codePart: string = options.codePart;
+    const data: CopilotProcess = options.data;
+
+    const actionPrompt: CopilotActionPrompt = await this.getPrompt(
+      data,
+      codePart,
+    );
+
     const copilotResult: CopilotPromptResult =
       await this.askCopilot(actionPrompt);
 
-    const newContent: string = await this.cleanup(
-      copilotResult.output as string,
-    );
+    const newCodePart: string = await this.cleanupCode({
+      inputCode: codePart,
+      outputCode: copilotResult.output as string,
+    });
 
-    if (await this.isFileAlreadyWellCommented(newContent)) {
-      this.isRequirementsMet = true;
-      return data;
+    if (!(await this.isFileAlreadyWellCommented(newCodePart))) {
+      isWellCommented = false;
     }
-
-    // ask copilot again if the requirements are met.
-
-    const oldCode: string = data.input.files[data.input.currentFilePath]
-      ?.fileContent as string;
-    const newCode: string = newContent;
 
     const validationPrompt: CopilotActionPrompt =
       await this.getValidationPrompt({
-        oldCode,
-        newCode,
+        oldCode: codePart,
+        newCode: newCodePart,
       });
 
     const validationResponse: CopilotPromptResult =
@@ -58,19 +66,78 @@ export default class ImproveComments extends CopilotActionBase {
     const didPassValidation: boolean =
       await this.didPassValidation(validationResponse);
 
-    if (didPassValidation) {
-      // add to result.
-      data.result.files[data.input.currentFilePath] = {
-        ...data.input.files[data.input.currentFilePath],
-        fileContent: newContent,
-      } as CodeRepositoryFile;
+    if (
+      !didPassValidation &&
+      options.currentRetryCount < options.maxRetryCount
+    ) {
+      return await this.commentCodePart({
+        data: data,
+        codePart: codePart,
+        currentRetryCount: options.currentRetryCount + 1,
+        maxRetryCount: options.maxRetryCount,
+      });
+    }
 
+    if (!didPassValidation) {
+      return {
+        newCode: codePart,
+        isWellCommented: false,
+      };
+    }
+
+    return {
+      newCode: newCodePart,
+      isWellCommented: isWellCommented,
+    };
+  }
+
+  public override async onExecutionStep(
+    data: CopilotProcess,
+  ): Promise<CopilotProcess> {
+    // Action Prompt
+
+    const codeParts: string[] = await this.splitInputCode({
+      copilotProcess: data,
+      itemSize: 500,
+    });
+
+    let newContent: string = "";
+
+    let isWellCommented: boolean = true;
+
+    for (const codePart of codeParts) {
+      const codePartResult: {
+        newCode: string;
+        isWellCommented: boolean;
+      } = await this.commentCodePart({
+        data: data,
+        codePart: codePart,
+        currentRetryCount: 0,
+        maxRetryCount: 3,
+      });
+
+      if (!codePartResult.isWellCommented) {
+        isWellCommented = false;
+        newContent += codePartResult.newCode + "\n";
+      } else {
+        newContent += codePart + "\n";
+      }
+    }
+
+    if (isWellCommented) {
       this.isRequirementsMet = true;
       return data;
     }
 
-    // TODO: if the validation is not passed then ask copilot to improve the comments again.
+    newContent = newContent.trim();
 
+    // add to result.
+    data.result.files[data.input.currentFilePath] = {
+      ...data.input.files[data.input.currentFilePath],
+      fileContent: newContent,
+    } as CodeRepositoryFile;
+
+    this.isRequirementsMet = true;
     return data;
   }
 
@@ -135,21 +202,19 @@ export default class ImproveComments extends CopilotActionBase {
 
   public override async getPrompt(
     data: CopilotProcess,
+    inputCode: string,
   ): Promise<CopilotActionPrompt> {
-    const fileLanguage: ServiceLanguage = data.input.files[
-      data.input.currentFilePath
-    ]?.fileLanguage as ServiceLanguage;
-    const code: string = data.input.files[data.input.currentFilePath]
-      ?.fileContent as string;
+    const fileLanguage: TechStack = data.input.files[data.input.currentFilePath]
+      ?.fileLanguage as TechStack;
 
-    const prompt: string = `Please improve the comments in this code. Please only comment code that is hard to understand. 
+    const prompt: string = `Please improve the comments in this code. Please only add minimal comments and comment code which is hard to understand. Please add comments in new line and do not add inline comments. 
 
     If you think the code is already well commented, please reply with the following text:
     --all-good--
     
     Here is the code. This is in ${fileLanguage}: 
     
-    ${code}
+    ${inputCode}
                 `;
 
     const systemPrompt: string = await this.getSystemPrompt();
@@ -172,12 +237,15 @@ export default class ImproveComments extends CopilotActionBase {
     const systemPrompt: string = `You are an expert programmer. Here are your instructions:
 - You will follow the instructions given by the user strictly.
 - You will not deviate from the instructions given by the user.
-- You will not change the code unnecessarily. For example you will not change the code structure, logic, quotes around strings, or functionality.`;
+- You will not change the code. You will only improve the comments.`;
 
     return systemPrompt;
   }
 
-  public async cleanup(code: string): Promise<string> {
+  public async cleanupCode(data: {
+    inputCode: string;
+    outputCode: string;
+  }): Promise<string> {
     // this code contains text as well. The code is in betwen ```<type> and ```. Please extract the code and return it.
     // for example code can be in the format of
     // ```python
@@ -188,13 +256,29 @@ export default class ImproveComments extends CopilotActionBase {
 
     // the code can be in multiple lines as well.
 
-    let extractedCode: string = code; // this is the code in the file
+    let extractedCode: string = data.outputCode; // this is the code in the file
 
-    if (!extractedCode.includes("```")) {
-      return extractedCode;
+    if (extractedCode.includes("```")) {
+      extractedCode = extractedCode.match(/```.*\n([\s\S]*?)```/)?.[1] ?? "";
     }
 
-    extractedCode = extractedCode.match(/```.*\n([\s\S]*?)```/)?.[1] ?? "";
+    // get first line of input code.
+
+    const firstWordOfInputCode: string = Text.getFirstWord(data.inputCode);
+    extractedCode = Text.trimStartUntilThisWord(
+      extractedCode,
+      firstWordOfInputCode,
+    );
+
+    const lastWordOfInputCode: string = Text.getLastWord(data.inputCode);
+    extractedCode = Text.trimEndUntilThisWord(
+      extractedCode,
+      lastWordOfInputCode,
+    );
+
+    extractedCode = Text.trimUpQuotesFromStartAndEnd(extractedCode);
+
+    // check for quotes.
 
     return extractedCode;
   }

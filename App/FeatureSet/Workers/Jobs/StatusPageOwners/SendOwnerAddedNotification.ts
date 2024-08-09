@@ -8,16 +8,16 @@ import NotificationSettingEventType from "Common/Types/NotificationSetting/Notif
 import ObjectID from "Common/Types/ObjectID";
 import { SMSMessage } from "Common/Types/SMS/SMS";
 import { EVERY_MINUTE } from "Common/Utils/CronTime";
-import StatusPageOwnerTeamService from "CommonServer/Services/StatusPageOwnerTeamService";
-import StatusPageOwnerUserService from "CommonServer/Services/StatusPageOwnerUserService";
-import StatusPageService from "CommonServer/Services/StatusPageService";
-import TeamMemberService from "CommonServer/Services/TeamMemberService";
-import UserNotificationSettingService from "CommonServer/Services/UserNotificationSettingService";
-import Markdown, { MarkdownContentType } from "CommonServer/Types/Markdown";
-import StatusPage from "Model/Models/StatusPage";
-import StatusPageOwnerTeam from "Model/Models/StatusPageOwnerTeam";
-import StatusPageOwnerUser from "Model/Models/StatusPageOwnerUser";
-import User from "Model/Models/User";
+import StatusPageOwnerTeamService from "Common/Server/Services/StatusPageOwnerTeamService";
+import StatusPageOwnerUserService from "Common/Server/Services/StatusPageOwnerUserService";
+import StatusPageService from "Common/Server/Services/StatusPageService";
+import TeamMemberService from "Common/Server/Services/TeamMemberService";
+import UserNotificationSettingService from "Common/Server/Services/UserNotificationSettingService";
+import Markdown, { MarkdownContentType } from "Common/Server/Types/Markdown";
+import StatusPage from "Common/Models/DatabaseModels/StatusPage";
+import StatusPageOwnerTeam from "Common/Models/DatabaseModels/StatusPageOwnerTeam";
+import StatusPageOwnerUser from "Common/Models/DatabaseModels/StatusPageOwnerUser";
+import User from "Common/Models/DatabaseModels/User";
 
 RunCron(
   "StatusPageOwner:SendOwnerAddedEmail",

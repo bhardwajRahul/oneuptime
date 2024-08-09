@@ -3,23 +3,23 @@ import DashboardNavigation from "../../../../Utils/Navigation";
 import PageComponentProps from "../../../PageComponentProps";
 import BadDataException from "Common/Types/Exception/BadDataException";
 import ObjectID from "Common/Types/ObjectID";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import ModelTable from "CommonUI/src/Components/ModelTable/ModelTable";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import Navigation from "CommonUI/src/Utils/Navigation";
-import ServiceCatalog from "Model/Models/ServiceCatalog";
-import ServiceRepository from "Model/Models/ServiceRepository";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import ModelTable from "Common/UI/Components/ModelTable/ModelTable";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import Navigation from "Common/UI/Utils/Navigation";
+import ServiceCatalog from "Common/Models/DatabaseModels/ServiceCatalog";
+import ServiceCopilotCodeRepository from "Common/Models/DatabaseModels/ServiceCopilotCodeRepository";
 import React, { Fragment, FunctionComponent, ReactElement } from "react";
 
-const ServiceRepositoryPage: FunctionComponent<
+const ServiceCopilotCodeRepositoryPage: FunctionComponent<
   PageComponentProps
 > = (): ReactElement => {
   const codeRepositoryId: ObjectID = Navigation.getLastParamAsObjectID(1);
 
   return (
     <Fragment>
-      <ModelTable<ServiceRepository>
-        modelType={ServiceRepository}
+      <ModelTable<ServiceCopilotCodeRepository>
+        modelType={ServiceCopilotCodeRepository}
         id="table-service-repository-page"
         name="Code Repository > Service Repository"
         isDeleteable={true}
@@ -33,8 +33,8 @@ const ServiceRepositoryPage: FunctionComponent<
           projectId: DashboardNavigation.getProjectId()?.toString(),
         }}
         onBeforeCreate={(
-          item: ServiceRepository,
-        ): Promise<ServiceRepository> => {
+          item: ServiceCopilotCodeRepository,
+        ): Promise<ServiceCopilotCodeRepository> => {
           item.codeRepositoryId = codeRepositoryId;
           item.projectId = DashboardNavigation.getProjectId()!;
           return Promise.resolve(item);
@@ -56,6 +56,8 @@ const ServiceRepositoryPage: FunctionComponent<
             fieldType: FormFieldSchemaType.Dropdown,
             required: true,
             placeholder: "Select Service",
+            description:
+              "Select the service that this repository is for. You can add a service from the Service Catalog.",
             dropdownModal: {
               type: ServiceCatalog,
               labelField: "name",
@@ -135,7 +137,7 @@ const ServiceRepositoryPage: FunctionComponent<
             title: "Service",
             type: FieldType.Entity,
 
-            getElement: (item: ServiceRepository): ReactElement => {
+            getElement: (item: ServiceCopilotCodeRepository): ReactElement => {
               if (!item["serviceCatalog"]) {
                 throw new BadDataException("Service not found");
               }
@@ -174,4 +176,4 @@ const ServiceRepositoryPage: FunctionComponent<
   );
 };
 
-export default ServiceRepositoryPage;
+export default ServiceCopilotCodeRepositoryPage;

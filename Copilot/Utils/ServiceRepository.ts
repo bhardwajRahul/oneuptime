@@ -1,26 +1,27 @@
-import { GetLocalRepositoryPath } from "../Config";
 import ServiceFileTypesUtil from "./ServiceFileTypes";
 import Dictionary from "Common/Types/Dictionary";
 import BadDataException from "Common/Types/Exception/BadDataException";
-import ServiceLanguage from "Common/Types/ServiceCatalog/ServiceLanguage";
-import CodeRepositoryCommonServerUtil from "CommonServer/Utils/CodeRepository/CodeRepository";
-import CodeRepositoryFile from "CommonServer/Utils/CodeRepository/CodeRepositoryFile";
-import LocalFile from "CommonServer/Utils/LocalFile";
-import ServiceRepository from "Model/Models/ServiceRepository";
-import ServiceLanguageUtil from "Common/Utils/ServiceLanguage";
+import TechStack from "Common/Types/ServiceCatalog/TechStack";
+import CodeRepositoryCommonServerUtil from "Common/Server/Utils/CodeRepository/CodeRepository";
+import CodeRepositoryFile from "Common/Server/Utils/CodeRepository/CodeRepositoryFile";
+import LocalFile from "Common/Server/Utils/LocalFile";
+import ServiceCopilotCodeRepository from "Common/Models/DatabaseModels/ServiceCopilotCodeRepository";
+import ServiceLanguageUtil from "Common/Utils/TechStack";
+import CodeRepositoryUtil from "./CodeRepository";
 
-export default class ServiceRepositoryUtil {
+export default class ServiceCopilotCodeRepositoryUtil {
   public static async getFileLanguage(data: {
     filePath: string;
-  }): Promise<ServiceLanguage> {
+  }): Promise<TechStack> {
     const fileExtention: string = LocalFile.getFileExtension(data.filePath);
 
-    const serviceLanguage: ServiceLanguage =
-      ServiceLanguageUtil.getLanguageByFileExtension({
+    const techStack: TechStack = ServiceLanguageUtil.getLanguageByFileExtension(
+      {
         fileExtension: fileExtention,
-      });
+      },
+    );
 
-    return serviceLanguage;
+    return techStack;
   }
 
   public static async getFileContent(data: {
@@ -30,7 +31,7 @@ export default class ServiceRepositoryUtil {
 
     const fileContent: string =
       await CodeRepositoryCommonServerUtil.getFileContent({
-        repoPath: GetLocalRepositoryPath(),
+        repoPath: CodeRepositoryUtil.getLocalRepositoryPath(),
         filePath: filePath,
       });
 
@@ -38,11 +39,11 @@ export default class ServiceRepositoryUtil {
   }
 
   public static async getFilesInServiceDirectory(data: {
-    serviceRepository: ServiceRepository;
+    serviceRepository: ServiceCopilotCodeRepository;
   }): Promise<Dictionary<CodeRepositoryFile>> {
     const { serviceRepository } = data;
 
-    if (!serviceRepository.serviceCatalog?.serviceLanguage) {
+    if (!serviceRepository.serviceCatalog?.techStack) {
       throw new BadDataException(
         "Service language is not defined in the service catalog",
       );
@@ -50,15 +51,15 @@ export default class ServiceRepositoryUtil {
 
     const allFiles: Dictionary<CodeRepositoryFile> =
       await CodeRepositoryCommonServerUtil.getFilesInDirectoryRecursive({
-        repoPath: GetLocalRepositoryPath(),
+        repoPath: CodeRepositoryUtil.getLocalRepositoryPath(),
         directoryPath: serviceRepository.servicePathInRepository || ".",
         acceptedFileExtensions:
-          ServiceFileTypesUtil.getFileExtentionsByServiceLanguage(
-            serviceRepository.serviceCatalog!.serviceLanguage!,
+          ServiceFileTypesUtil.getFileExtentionsByTechStack(
+            serviceRepository.serviceCatalog!.techStack!,
           ),
         ignoreFilesOrDirectories:
-          ServiceFileTypesUtil.getCommonFilesToIgnoreByServiceLanguage(
-            serviceRepository.serviceCatalog!.serviceLanguage!,
+          ServiceFileTypesUtil.getCommonFilesToIgnoreByTechStack(
+            serviceRepository.serviceCatalog!.techStack!,
           ),
       });
 

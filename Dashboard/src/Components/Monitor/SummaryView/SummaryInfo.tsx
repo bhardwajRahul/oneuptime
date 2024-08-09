@@ -1,6 +1,8 @@
+import ServerMonitorResponse from "Common/Types/Monitor/ServerMonitor/ServerMonitorResponse";
 import IncomingRequestMonitorView from "./IncomingRequestMonitorSummaryView";
 import PingMonitorView from "./PingMonitorView";
 import SSLCertificateMonitorView from "./SSLCertificateMonitorView";
+import ServerMonitorSummaryView from "./ServerMonitorView";
 import SyntheticMonitorView from "./SyntheticMonitorView";
 import WebsiteMonitorSummaryView from "./WebsiteMonitorView";
 import IncomingMonitorRequest from "Common/Types/Monitor/IncomingMonitor/IncomingMonitorRequest";
@@ -8,13 +10,17 @@ import MonitorType, {
   MonitorTypeHelper,
 } from "Common/Types/Monitor/MonitorType";
 import ProbeMonitorResponse from "Common/Types/Probe/ProbeMonitorResponse";
-import ErrorMessage from "CommonUI/src/Components/ErrorMessage/ErrorMessage";
+import ErrorMessage from "Common/UI/Components/ErrorMessage/ErrorMessage";
 import React, { FunctionComponent, ReactElement } from "react";
+import TelemetryMonitorSummaryView from "./TelemetryMonitorView";
+import TelemetryMonitorSummary from "./Types/TelemetryMonitorSummary";
 
 export interface ComponentProps {
   monitorType: MonitorType;
   probeMonitorResponses?: Array<ProbeMonitorResponse> | undefined; // this is an array because of multiple monitor steps.
   incomingMonitorRequest?: IncomingMonitorRequest | undefined;
+  serverMonitorResponse?: ServerMonitorResponse | undefined;
+  telemetryMonitorSummary?: TelemetryMonitorSummary | undefined;
 }
 
 const SummaryInfo: FunctionComponent<ComponentProps> = (
@@ -86,7 +92,7 @@ const SummaryInfo: FunctionComponent<ComponentProps> = (
   };
 
   if (
-    MonitorTypeHelper.isProbableMonitors(props.monitorType) &&
+    MonitorTypeHelper.isProbableMonitor(props.monitorType) &&
     (!props.probeMonitorResponses || props.probeMonitorResponses.length === 0)
   ) {
     return (
@@ -128,6 +134,22 @@ const SummaryInfo: FunctionComponent<ComponentProps> = (
       ) : (
         <></>
       )}
+
+      {props.monitorType === MonitorType.Server &&
+      props.serverMonitorResponse ? (
+        <ServerMonitorSummaryView
+          serverMonitorResponse={props.serverMonitorResponse}
+        />
+      ) : (
+        <></>
+      )}
+
+      {props.monitorType === MonitorType.Logs ||
+        (props.monitorType === MonitorType.Traces && (
+          <TelemetryMonitorSummaryView
+            telemetryMonitorSummary={props.telemetryMonitorSummary}
+          />
+        ))}
     </div>
   );
 };

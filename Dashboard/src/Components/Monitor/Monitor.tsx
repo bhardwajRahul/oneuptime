@@ -3,15 +3,15 @@ import RouteMap, { RouteUtil } from "../../Utils/RouteMap";
 import Route from "Common/Types/API/Route";
 import IconProp from "Common/Types/Icon/IconProp";
 import ObjectID from "Common/Types/ObjectID";
-import Icon from "CommonUI/src/Components/Icon/Icon";
-import Link from "CommonUI/src/Components/Link/Link";
-import Monitor from "Model/Models/Monitor";
+import Icon from "Common/UI/Components/Icon/Icon";
+import Link from "Common/UI/Components/Link/Link";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
 import React, { FunctionComponent, ReactElement } from "react";
 
 export interface ComponentProps {
   monitor: Monitor;
   onNavigateComplete?: (() => void) | undefined;
-  showIcon?: boolean;
+  showIcon?: boolean | undefined;
 }
 
 const MonitorElement: FunctionComponent<ComponentProps> = (

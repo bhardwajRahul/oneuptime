@@ -5,9 +5,10 @@ import BrowserType from "Common/Types/Monitor/SyntheticMonitors/BrowserType";
 import ScreenSizeType from "Common/Types/Monitor/SyntheticMonitors/ScreenSizeType";
 import SyntheticMonitorResponse from "Common/Types/Monitor/SyntheticMonitors/SyntheticMonitorResponse";
 import ObjectID from "Common/Types/ObjectID";
-import logger from "CommonServer/Utils/Logger";
-import VMRunner from "CommonServer/Utils/VM/VMRunner";
+import logger from "Common/Server/Utils/Logger";
+import VMRunner from "Common/Server/Utils/VM/VMRunner";
 import { Browser, Page, chromium, firefox } from "playwright";
+import LocalFile from "Common/Server/Utils/LocalFile";
 
 export interface SyntheticMonitorOptions {
   monitorId?: ObjectID | undefined;
@@ -186,6 +187,66 @@ export default class SyntheticMonitor {
     return { height: viewPortHeight, width: viewPortWidth };
   }
 
+  public static async getChromeExecutablePath(): Promise<string> {
+    const doesDirectoryExist: boolean = await LocalFile.doesDirectoryExist(
+      "/root/.cache/ms-playwright",
+    );
+    if (!doesDirectoryExist) {
+      throw new BadDataException("Chrome executable path not found.");
+    }
+
+    // get list of files in the directory
+    const directories: string[] = await LocalFile.getListOfDirectories(
+      "/root/.cache/ms-playwright",
+    );
+
+    if (directories.length === 0) {
+      throw new BadDataException("Chrome executable path not found.");
+    }
+
+    const chromeInstallationName: string | undefined = directories.find(
+      (directory: string) => {
+        return directory.includes("chromium");
+      },
+    );
+
+    if (!chromeInstallationName) {
+      throw new BadDataException("Chrome executable path not found.");
+    }
+
+    return `/root/.cache/ms-playwright/${chromeInstallationName}/chrome-linux/chrome`;
+  }
+
+  public static async getFirefoxExecutablePath(): Promise<string> {
+    const doesDirectoryExist: boolean = await LocalFile.doesDirectoryExist(
+      "/root/.cache/ms-playwright",
+    );
+    if (!doesDirectoryExist) {
+      throw new BadDataException("Firefox executable path not found.");
+    }
+
+    // get list of files in the directory
+    const directories: string[] = await LocalFile.getListOfDirectories(
+      "/root/.cache/ms-playwright",
+    );
+
+    if (directories.length === 0) {
+      throw new BadDataException("Firefox executable path not found.");
+    }
+
+    const firefoxInstallationName: string | undefined = directories.find(
+      (directory: string) => {
+        return directory.includes("firefox");
+      },
+    );
+
+    if (!firefoxInstallationName) {
+      throw new BadDataException("Firefox executable path not found.");
+    }
+
+    return `/root/.cache/ms-playwright/${firefoxInstallationName}/firefox/firefox`;
+  }
+
   private static async getPageByBrowserType(data: {
     browserType: BrowserType;
     screenSizeType: ScreenSizeType;
@@ -204,12 +265,16 @@ export default class SyntheticMonitor {
     let browser: Browser | null = null;
 
     if (data.browserType === BrowserType.Chromium) {
-      browser = await chromium.launch();
+      browser = await chromium.launch({
+        executablePath: await this.getChromeExecutablePath(),
+      });
       page = await browser.newPage();
     }
 
     if (data.browserType === BrowserType.Firefox) {
-      browser = await firefox.launch();
+      browser = await firefox.launch({
+        executablePath: await this.getFirefoxExecutablePath(),
+      });
       page = await browser.newPage();
     }
 

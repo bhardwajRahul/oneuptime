@@ -2,26 +2,26 @@ import NotificationMethodView from "../../Components/NotificationMethods/Notific
 import NotifyAfterDropdownOptions from "../../Components/NotificationRule/NotifyAfterMinutesDropdownOptions";
 import DashboardNavigation from "../../Utils/Navigation";
 import PageComponentProps from "../PageComponentProps";
-import BaseModel from "Common/Models/BaseModel";
+import BaseModel from "Common/Models/DatabaseModels/DatabaseBaseModel/DatabaseBaseModel";
 import SortOrder from "Common/Types/BaseDatabase/SortOrder";
 import { LIMIT_PER_PROJECT } from "Common/Types/Database/LimitMax";
 import { PromiseVoidFunction } from "Common/Types/FunctionTypes";
 import { JSONObject } from "Common/Types/JSON";
 import NotificationRuleType from "Common/Types/NotificationRule/NotificationRuleType";
-import { DropdownOption } from "CommonUI/src/Components/Dropdown/Dropdown";
-import ErrorMessage from "CommonUI/src/Components/ErrorMessage/ErrorMessage";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import PageLoader from "CommonUI/src/Components/Loader/PageLoader";
-import ModelTable from "CommonUI/src/Components/ModelTable/ModelTable";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import API from "CommonUI/src/Utils/API/API";
-import ModelAPI, { ListResult } from "CommonUI/src/Utils/ModelAPI/ModelAPI";
-import User from "CommonUI/src/Utils/User";
-import IncidentSeverity from "Model/Models/IncidentSeverity";
-import UserCall from "Model/Models/UserCall";
-import UserEmail from "Model/Models/UserEmail";
-import UserNotificationRule from "Model/Models/UserNotificationRule";
-import UserSMS from "Model/Models/UserSMS";
+import { DropdownOption } from "Common/UI/Components/Dropdown/Dropdown";
+import ErrorMessage from "Common/UI/Components/ErrorMessage/ErrorMessage";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import PageLoader from "Common/UI/Components/Loader/PageLoader";
+import ModelTable from "Common/UI/Components/ModelTable/ModelTable";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import API from "Common/UI/Utils/API/API";
+import ModelAPI, { ListResult } from "Common/UI/Utils/ModelAPI/ModelAPI";
+import User from "Common/UI/Utils/User";
+import IncidentSeverity from "Common/Models/DatabaseModels/IncidentSeverity";
+import UserCall from "Common/Models/DatabaseModels/UserCall";
+import UserEmail from "Common/Models/DatabaseModels/UserEmail";
+import UserNotificationRule from "Common/Models/DatabaseModels/UserNotificationRule";
+import UserSMS from "Common/Models/DatabaseModels/UserSMS";
 import React, {
   Fragment,
   FunctionComponent,

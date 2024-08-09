@@ -1,18 +1,19 @@
 import { INGESTOR_URL, PROBE_MONITOR_FETCH_LIMIT } from "../../Config";
 import MonitorUtil from "../../Utils/Monitors/Monitor";
 import ProbeAPIRequest from "../../Utils/ProbeAPIRequest";
-import BaseModel from "Common/Models/BaseModel";
+import BaseModel from "Common/Models/DatabaseModels/DatabaseBaseModel/DatabaseBaseModel";
 import HTTPErrorResponse from "Common/Types/API/HTTPErrorResponse";
 import HTTPMethod from "Common/Types/API/HTTPMethod";
 import HTTPResponse from "Common/Types/API/HTTPResponse";
 import URL from "Common/Types/API/URL";
 import OneUptimeDate from "Common/Types/Date";
+import APIException from "Common/Types/Exception/ApiException";
 import { JSONArray } from "Common/Types/JSON";
 import ProbeMonitorResponse from "Common/Types/Probe/ProbeMonitorResponse";
 import Sleep from "Common/Types/Sleep";
 import API from "Common/Utils/API";
-import logger from "CommonServer/Utils/Logger";
-import Monitor from "Model/Models/Monitor";
+import logger from "Common/Server/Utils/Logger";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
 
 export default class FetchListAndProbe {
   private workerName: string = "";
@@ -26,20 +27,29 @@ export default class FetchListAndProbe {
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const runTime: Date = OneUptimeDate.getCurrentDate();
+      try {
+        const runTime: Date = OneUptimeDate.getCurrentDate();
 
-      logger.debug(`Probing monitors ${this.workerName}`);
+        logger.debug(`Probing monitors ${this.workerName}`);
 
-      await this.fetchListAndProbe();
+        await this.fetchListAndProbe();
 
-      logger.debug(`Probing monitors ${this.workerName} complete`);
+        logger.debug(`Probing monitors ${this.workerName} complete`);
 
-      // if rumTime  + 5 seconds is in the future, then this fetchLst either errored out or had no monitors in the list. Either way, wait for 5 seconds and proceed.
+        // if rumTime  + 5 seconds is in the future, then this fetchLst either errored out or had no monitors in the list. Either way, wait for 5 seconds and proceed.
 
-      const twoSecondsAdded: Date = OneUptimeDate.addRemoveSeconds(runTime, 2);
+        const twoSecondsAdded: Date = OneUptimeDate.addRemoveSeconds(
+          runTime,
+          2,
+        );
 
-      if (OneUptimeDate.isInTheFuture(twoSecondsAdded)) {
-        logger.debug(`Worker ${this.workerName} is waiting for 2 seconds`);
+        if (OneUptimeDate.isInTheFuture(twoSecondsAdded)) {
+          logger.debug(`Worker ${this.workerName} is waiting for 2 seconds`);
+          await Sleep.sleep(2000);
+        }
+      } catch (err) {
+        logger.error(`Error in worker ${this.workerName}`);
+        logger.error(err);
         await Sleep.sleep(2000);
       }
     }
@@ -107,6 +117,11 @@ export default class FetchListAndProbe {
     } catch (err) {
       logger.error("Error in fetching monitor list");
       logger.error(err);
+
+      if (err instanceof APIException) {
+        logger.error("API Exception Error");
+        logger.error(JSON.stringify(err.error, null, 2));
+      }
     }
   }
 }

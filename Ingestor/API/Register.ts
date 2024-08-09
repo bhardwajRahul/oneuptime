@@ -1,16 +1,18 @@
 import OneUptimeDate from "Common/Types/Date";
 import BadDataException from "Common/Types/Exception/BadDataException";
 import { JSONObject } from "Common/Types/JSON";
-import ClusterKeyAuthorization from "CommonServer/Middleware/ClusterKeyAuthorization";
-import ProbeService from "CommonServer/Services/ProbeService";
+import ClusterKeyAuthorization from "Common/Server/Middleware/ClusterKeyAuthorization";
+import ProbeService from "Common/Server/Services/ProbeService";
 import Express, {
   ExpressRequest,
   ExpressResponse,
   ExpressRouter,
   NextFunction,
-} from "CommonServer/Utils/Express";
-import Response from "CommonServer/Utils/Response";
-import Probe from "Model/Models/Probe";
+} from "Common/Server/Utils/Express";
+import Response from "Common/Server/Utils/Response";
+import Probe, {
+  ProbeConnectionStatus,
+} from "Common/Models/DatabaseModels/Probe";
 
 const router: ExpressRouter = Express.getRouter();
 
@@ -56,6 +58,7 @@ router.post(
             name: data["probeName"] as string,
             description: data["probeDescription"] as string,
             lastAlive: OneUptimeDate.getCurrentDate(),
+            connectionStatus: ProbeConnectionStatus.Connected,
           },
           props: {
             isRoot: true,
@@ -74,6 +77,7 @@ router.post(
       newProbe.name = data["probeName"] as string;
       newProbe.description = data["probeDescription"] as string;
       newProbe.lastAlive = OneUptimeDate.getCurrentDate();
+      newProbe.connectionStatus = ProbeConnectionStatus.Connected;
       newProbe.shouldAutoEnableProbeOnNewMonitors = true;
 
       newProbe = await ProbeService.create({

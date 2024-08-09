@@ -42,19 +42,31 @@ enum Permission {
   EditProjectApiKey = "EditProjectApiKey",
   EditProjectApiKeyPermissions = "EditProjectApiKeyPermissions",
 
-  // Logs
+  CreateTelemetryIngestionKey = "CreateTelemetryIngestionKey",
+  DeleteTelemetryIngestionKey = "DeleteTelemetryIngestionKey",
+  ReadTelemetryIngestionKey = "ReadTelemetryIngestionKey",
+  EditTelemetryIngestionKey = "EditTelemetryIngestionKey",
 
+  // Logs
   CreateTelemetryServiceLog = "CreateTelemetryServiceLog",
   DeleteTelemetryServiceLog = "DeleteTelemetryServiceLog",
   EditTelemetryServiceLog = "EditTelemetryServiceLog",
   ReadTelemetryServiceLog = "ReadTelemetryServiceLog",
 
   // Spans
-
   CreateTelemetryServiceTraces = "CreateTelemetryServiceTraces",
   DeleteTelemetryServiceTraces = "DeleteTelemetryServiceTraces",
   EditTelemetryServiceTraces = "EditTelemetryServiceTraces",
   ReadTelemetryServiceTraces = "ReadTelemetryServiceTraces",
+
+  // Metrics
+  CreateTelemetryServiceMetrics = "CreateTelemetryServiceMetrics",
+  DeleteTelemetryServiceMetrics = "DeleteTelemetryServiceMetrics",
+  EditTelemetryServiceMetrics = "EditTelemetryServiceMetrics",
+  ReadTelemetryServiceMetrics = "ReadTelemetryServiceMetrics",
+
+  // Telemetry Attributes
+  DeleteTelemetryAttributes = "DeleteTelemetryAttributes",
 
   // Billing Permissions (Owner Permission)
   ManageProjectBilling = "ManageProjectBilling",
@@ -460,17 +472,44 @@ enum Permission {
   EditServiceCatalog = "EditServiceCatalog",
   ReadServiceCatalog = "ReadServiceCatalog",
 
-  CreateCodeRepository = "CreateCodeRepository",
-  DeleteCodeRepository = "DeleteCodeRepository",
-  EditCodeRepository = "EditCodeRepository",
-  ReadCodeRepository = "ReadCodeRepository",
+  CreateServiceCatlogDependency = "CreateServiceCatlogDependency",
+  DeleteServiceCatlogDependency = "DeleteServiceCatlogDependency",
+  EditServiceCatlogDependency = "EditServiceCatlogDependency",
+  ReadServiceCatlogDependency = "ReadServiceCatlogDependency",
+
+  CreateServiceCatalogMonitor = "CreateServiceCatalogMonitor",
+  DeleteServiceCatalogMonitor = "DeleteServiceCatalogMonitor",
+  EditServiceCatalogMonitor = "EditServiceCatalogMonitor",
+  ReadServiceCatalogMonitor = "ReadServiceCatalogMonitor",
+
+  CreateServiceCatalogTelemetryService = "CreateServiceCatalogTelemetryService",
+  DeleteServiceCatalogTelemetryService = "DeleteServiceCatalogTelemetryService",
+  EditServiceCatalogTelemetryService = "EditServiceCatalogTelemetryService",
+  ReadServiceCatalogTelemetryService = "ReadServiceCatalogTelemetryService",
+
+  CreateCopilotCodeRepository = "CreateCopilotCodeRepository",
+  DeleteCopilotCodeRepository = "DeleteCopilotCodeRepository",
+  EditCopilotCodeRepository = "EditCopilotCodeRepository",
+  ReadCopilotCodeRepository = "ReadCopilotCodeRepository",
 
   ReadCopilotAction = "ReadCopilotAction",
 
-  CreateServiceRepository = "CreateServiceRepository",
-  DeleteServiceRepository = "DeleteServiceRepository",
-  EditServiceRepository = "EditServiceRepository",
-  ReadServiceRepository = "ReadServiceRepository",
+  ReadCopilotPullRequest = "ReadCopilotPullRequest",
+
+  CreateProbeOwnerTeam = "CreateProbeOwnerTeam",
+  DeleteProbeOwnerTeam = "DeleteProbeOwnerTeam",
+  EditProbeOwnerTeam = "EditProbeOwnerTeam",
+  ReadProbeOwnerTeam = "ReadProbeOwnerTeam",
+
+  CreateProbeOwnerUser = "CreateProbeOwnerUser",
+  DeleteProbeOwnerUser = "DeleteProbeOwnerUser",
+  EditProbeOwnerUser = "EditProbeOwnerUser",
+  ReadProbeOwnerUser = "ReadProbeOwnerUser",
+
+  CreateServiceCopilotCodeRepository = "CreateServiceCopilotCodeRepository",
+  DeleteServiceCopilotCodeRepository = "DeleteServiceCopilotCodeRepository",
+  EditServiceCopilotCodeRepository = "EditServiceCopilotCodeRepository",
+  ReadServiceCopilotCodeRepository = "ReadServiceCopilotCodeRepository",
 }
 
 export class PermissionHelper {
@@ -706,6 +745,39 @@ export class PermissionHelper {
         permission: Permission.ReadProjectApiKey,
         title: "Read API Key",
         description: "This permission can read api keys of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+
+      {
+        permission: Permission.CreateTelemetryIngestionKey,
+        title: "Create Telemetry Ingestion Key",
+        description:
+          "This permission can create Telemetry Ingestion Keys of this project",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.DeleteTelemetryIngestionKey,
+        title: "Delete Telemetry Ingestion Key",
+        description:
+          "This permission can delete Telemetry Ingestion Keys of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.EditTelemetryIngestionKey,
+        title: "Edit Telemetry Ingestion Key",
+        description:
+          "This permission can edit Telemetry Ingestion Keys of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.ReadTelemetryIngestionKey,
+        title: "Read Telemetry Ingestion Key",
+        description:
+          "This permission can read Telemetry Ingestion Keys of this project.",
         isAssignableToTenant: true,
         isAccessControlPermission: false,
       },
@@ -1978,28 +2050,28 @@ export class PermissionHelper {
         title: "Create Probe",
         description: "This permission can create probe this project.",
         isAssignableToTenant: true,
-        isAccessControlPermission: false,
+        isAccessControlPermission: true,
       },
       {
         permission: Permission.DeleteProjectProbe,
         title: "Delete Probe",
         description: "This permission can delete probe of this project.",
         isAssignableToTenant: true,
-        isAccessControlPermission: false,
+        isAccessControlPermission: true,
       },
       {
         permission: Permission.EditProjectProbe,
         title: "Edit Probe",
         description: "This permission can edit probe of this project.",
         isAssignableToTenant: true,
-        isAccessControlPermission: false,
+        isAccessControlPermission: true,
       },
       {
         permission: Permission.ReadProjectProbe,
         title: "Read Probe",
         description: "This permission can read probe of this project.",
         isAssignableToTenant: true,
-        isAccessControlPermission: false,
+        isAccessControlPermission: true,
       },
 
       {
@@ -2374,14 +2446,14 @@ export class PermissionHelper {
       },
 
       {
-        permission: Permission.CreateCodeRepository,
+        permission: Permission.CreateCopilotCodeRepository,
         title: "Create Code Repository",
         description: "This permission can create Code Repository this project.",
         isAssignableToTenant: true,
         isAccessControlPermission: true,
       },
       {
-        permission: Permission.DeleteCodeRepository,
+        permission: Permission.DeleteCopilotCodeRepository,
         title: "Delete Code Repository",
         description:
           "This permission can delete Code Repository of this project.",
@@ -2389,7 +2461,7 @@ export class PermissionHelper {
         isAccessControlPermission: true,
       },
       {
-        permission: Permission.EditCodeRepository,
+        permission: Permission.EditCopilotCodeRepository,
         title: "Edit Code Repository",
         description:
           "This permission can edit Code Repository of this project.",
@@ -2397,7 +2469,7 @@ export class PermissionHelper {
         isAccessControlPermission: true,
       },
       {
-        permission: Permission.ReadCodeRepository,
+        permission: Permission.ReadCopilotCodeRepository,
         title: "Read Code Repository",
         description:
           "This permission can read Code Repository of this project.",
@@ -2406,7 +2478,7 @@ export class PermissionHelper {
       },
 
       {
-        permission: Permission.CreateServiceRepository,
+        permission: Permission.CreateServiceCopilotCodeRepository,
         title: "Create Service Repository",
         description:
           "This permission can create Service Repository this project.",
@@ -2414,7 +2486,7 @@ export class PermissionHelper {
         isAccessControlPermission: true,
       },
       {
-        permission: Permission.DeleteServiceRepository,
+        permission: Permission.DeleteServiceCopilotCodeRepository,
         title: "Delete Service Repository",
         description:
           "This permission can delete Service Repository of this project.",
@@ -2422,7 +2494,7 @@ export class PermissionHelper {
         isAccessControlPermission: true,
       },
       {
-        permission: Permission.EditServiceRepository,
+        permission: Permission.EditServiceCopilotCodeRepository,
         title: "Edit Service Repository",
         description:
           "This permission can edit Service Repository of this project.",
@@ -2430,7 +2502,7 @@ export class PermissionHelper {
         isAccessControlPermission: true,
       },
       {
-        permission: Permission.ReadServiceRepository,
+        permission: Permission.ReadServiceCopilotCodeRepository,
         title: "Read Service Repository",
         description:
           "This permission can read Service Repository of this project.",
@@ -2442,6 +2514,64 @@ export class PermissionHelper {
         permission: Permission.ReadCopilotAction,
         title: "Read Copilot Event",
         description: "This permission can read Copilot Event of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+
+      {
+        permission: Permission.CreateProbeOwnerTeam,
+        title: "Create Probe Owner Team",
+        description: "This permission can create owners for probes.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.DeleteProbeOwnerTeam,
+        title: "Delete Probe Owner Team",
+        description: "This permission can delete owners for probes",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.EditProbeOwnerTeam,
+        title: "Edit Probe Owner Team",
+        description: "This permission can edit owners for probes",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.ReadProbeOwnerTeam,
+        title: "Read Probe Owner Team",
+        description: "This permission can read owners for probes",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+
+      {
+        permission: Permission.CreateProbeOwnerUser,
+        title: "Create Probe Owner User",
+        description: "This permission can create owners for probes.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.DeleteProbeOwnerUser,
+        title: "Delete Probe Owner User",
+        description: "This permission can delete owners for probes",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.EditProbeOwnerUser,
+        title: "Edit Probe Owner User",
+        description: "This permission can edit owners for probes",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.ReadProbeOwnerUser,
+        title: "Read Probe Owner User",
+        description: "This permission can read owners for probes",
         isAssignableToTenant: true,
         isAccessControlPermission: false,
       },
@@ -2479,6 +2609,105 @@ export class PermissionHelper {
       },
 
       {
+        permission: Permission.CreateServiceCatlogDependency,
+        title: "Create Service Catalog Dependency",
+        description:
+          "This permission can create Service Catalog Dependencies this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.DeleteServiceCatlogDependency,
+        title: "Delete Service Catalog Dependency",
+        description:
+          "This permission can delete Service Catalog Dependencies of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.EditServiceCatlogDependency,
+        title: "Edit Service Catalog Dependency",
+        description:
+          "This permission can edit Service Catalog Dependencies of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.ReadServiceCatlogDependency,
+        title: "Read Service Catalog Dependency",
+        description:
+          "This permission can read Service Catalog Dependencies of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+
+      {
+        permission: Permission.CreateServiceCatalogMonitor,
+        title: "Create Service Catalog Monitor",
+        description:
+          "This permission can create Service Catalog Monitor this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.DeleteServiceCatalogMonitor,
+        title: "Delete Service Catalog Monitor",
+        description:
+          "This permission can delete Service Catalog Monitor of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.EditServiceCatalogMonitor,
+        title: "Edit Service Catalog Monitor",
+        description:
+          "This permission can edit Service Catalog Monitor of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.ReadServiceCatalogMonitor,
+        title: "Read Service Catalog Monitor",
+        description:
+          "This permission can read Service Catalog Monitor of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+
+      {
+        permission: Permission.CreateServiceCatalogTelemetryService,
+        title: "Create Service Catalog Telemetry Service",
+        description:
+          "This permission can create Service Catalog Telemetry Service this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.DeleteServiceCatalogTelemetryService,
+        title: "Delete Service Catalog Telemetry Service",
+        description:
+          "This permission can delete Service Catalog Telemetry Service of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.EditServiceCatalogTelemetryService,
+        title: "Edit Service Catalog Telemetry Service",
+        description:
+          "This permission can edit Service Catalog Telemetry Service of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.ReadServiceCatalogTelemetryService,
+        title: "Read Service Catalog Telemetry Service",
+        description:
+          "This permission can read Service Catalog Telemetry Service of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+
+      {
         permission: Permission.CreateTelemetryServiceTraces,
         title: "Create Telemetry Service Traces",
         description:
@@ -2507,6 +2736,39 @@ export class PermissionHelper {
         title: "Read Telemetry Service Traces",
         description:
           "This permission can read Telemetry Service Traces of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+
+      {
+        permission: Permission.CreateTelemetryServiceMetrics,
+        title: "Create Telemetry Service Metrics",
+        description:
+          "This permission can create Telemetry Service Metrics this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.DeleteTelemetryServiceMetrics,
+        title: "Delete Telemetry Service Metrics",
+        description:
+          "This permission can delete Telemetry Service Metrics of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.EditTelemetryServiceMetrics,
+        title: "Edit Telemetry Service Metrics",
+        description:
+          "This permission can edit Telemetry Service Metrics of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+      },
+      {
+        permission: Permission.ReadTelemetryServiceMetrics,
+        title: "Read Telemetry Service Metrics",
+        description:
+          "This permission can read Telemetry Service Metrics of this project.",
         isAssignableToTenant: true,
         isAccessControlPermission: false,
       },

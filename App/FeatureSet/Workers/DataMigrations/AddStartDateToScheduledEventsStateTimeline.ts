@@ -1,13 +1,13 @@
 import DataMigrationBase from "./DataMigrationBase";
 import SortOrder from "Common/Types/BaseDatabase/SortOrder";
 import LIMIT_MAX from "Common/Types/Database/LimitMax";
-import ProjectService from "CommonServer/Services/ProjectService";
-import ScheduledMaintenanceService from "CommonServer/Services/ScheduledMaintenanceService";
-import ScheduledMaintenanceStateTimelineService from "CommonServer/Services/ScheduledMaintenanceStateTimelineService";
-import QueryHelper from "CommonServer/Types/Database/QueryHelper";
-import Project from "Model/Models/Project";
-import ScheduledMaintenance from "Model/Models/ScheduledMaintenance";
-import ScheduledMaintenanceStateTimeline from "Model/Models/ScheduledMaintenanceStateTimeline";
+import ProjectService from "Common/Server/Services/ProjectService";
+import ScheduledMaintenanceService from "Common/Server/Services/ScheduledMaintenanceService";
+import ScheduledMaintenanceStateTimelineService from "Common/Server/Services/ScheduledMaintenanceStateTimelineService";
+import QueryHelper from "Common/Server/Types/Database/QueryHelper";
+import Project from "Common/Models/DatabaseModels/Project";
+import ScheduledMaintenance from "Common/Models/DatabaseModels/ScheduledMaintenance";
+import ScheduledMaintenanceStateTimeline from "Common/Models/DatabaseModels/ScheduledMaintenanceStateTimeline";
 
 export default class AddStartDateToScheduledEventsStateTimeline extends DataMigrationBase {
   public constructor() {

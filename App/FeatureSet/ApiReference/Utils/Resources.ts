@@ -1,8 +1,8 @@
-import BaseModel from "Common/Models/BaseModel";
+import BaseModel from "Common/Models/DatabaseModels/DatabaseBaseModel/DatabaseBaseModel";
 import ArrayUtil from "Common/Types/ArrayUtil";
 import Dictionary from "Common/Types/Dictionary";
-import { IsBillingEnabled } from "CommonServer/EnvironmentConfig";
-import Models from "Model/Models/Index";
+import { IsBillingEnabled } from "Common/Server/EnvironmentConfig";
+import Models from "Common/Models/DatabaseModels/Index";
 
 export interface ModelDocumentation {
   name: string;
@@ -12,12 +12,14 @@ export interface ModelDocumentation {
 }
 
 export default class ResourceUtil {
+  // Get all resources that should have documentation enabled
   public static getResources(): Array<ModelDocumentation> {
     const resources: Array<ModelDocumentation> = Models.filter(
       (model: typeof BaseModel) => {
         const modelInstance: BaseModel = new model();
         let showDocs: boolean = modelInstance.enableDocumentation;
 
+        // If billing is enabled, do not show master admin API docs
         if (modelInstance.isMasterAdminApiDocs && IsBillingEnabled) {
           showDocs = false;
         }
@@ -40,6 +42,7 @@ export default class ResourceUtil {
     return resources;
   }
 
+  // Get featured resources that are pre-selected
   public static getFeaturedResources(): Array<ModelDocumentation> {
     const featuredResources: Array<string> = [
       "Monitor",
@@ -59,6 +62,7 @@ export default class ResourceUtil {
     );
   }
 
+  // Create a dictionary of resources indexed by their path
   public static getResourceDictionaryByPath(): Dictionary<ModelDocumentation> {
     const dict: Dictionary<ModelDocumentation> = {};
 

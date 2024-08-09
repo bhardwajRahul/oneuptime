@@ -21,8 +21,24 @@ jobs:
 
   llm-docker-image-deploy: 
     needs: generate-build-number
+    strategy:
+      fail-fast: false
     runs-on: ubuntu-latest
     steps:
+
+      # Docker compose needs a lot of space to build images, so we need to free up some space first in the GitHub Actions runner
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
       - name: Docker Meta
         id: meta
@@ -43,7 +59,11 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 18.3.0
-
+      
+      # - name: Setup Git LFS
+      #   run: git lfs install
+        
+      # # Cannot do this, no space on the gitHub standard runner. We need to use the large runner which is selfhosted
       # - name: Download the Model from Hugging Face
       #   run: mkdir -p ./LLM/Models && cd ./LLM/Models && git clone https://${{ secrets.HUGGING_FACE_USERNAME }}:${{ secrets.HUGGING_FACE_PASSWORD }}@huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct
 
@@ -74,7 +94,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          file: ./Dockerfile
+          file: ./LLM/Dockerfile
           context: ./LLM
           # arm64 is not supported by the base image of the LLM
           platforms: linux/amd64 
@@ -1047,7 +1067,7 @@ jobs:
       - name: Wait for server to start
         run: bash ./Tests/Scripts/status-check.sh http://localhost
       - name: Run E2E Tests. Run docker container e2e in docker compose file
-        run: export $(grep -v '^#' config.env | xargs) && docker-compose -f docker-compose.dev.yml up --exit-code-from e2e --abort-on-container-exit e2e || (docker-compose -f docker-compose.dev.yml logs e2e && exit 1)
+        run: export $(grep -v '^#' config.env | xargs) && docker compose -f docker-compose.dev.yml up --exit-code-from e2e --abort-on-container-exit e2e || (docker compose -f docker-compose.dev.yml logs e2e && exit 1)
       - name: Upload test results
         uses: actions/upload-artifact@v4
         # Run this on failure
@@ -1100,7 +1120,7 @@ jobs:
       - name: Wait for server to start
         run: bash ./Tests/Scripts/status-check.sh http://localhost
       - name: Run E2E Tests. Run docker container e2e in docker compose file
-        run: export $(grep -v '^#' config.env | xargs) && docker-compose -f docker-compose.dev.yml up --exit-code-from e2e --abort-on-container-exit e2e || (docker-compose -f docker-compose.dev.yml logs e2e && exit 1)
+        run: export $(grep -v '^#' config.env | xargs) && docker compose -f docker-compose.dev.yml up --exit-code-from e2e --abort-on-container-exit e2e || (docker compose -f docker-compose.dev.yml logs e2e && exit 1)
       - name: Upload test results
         uses: actions/upload-artifact@v4
         # Run this on failure

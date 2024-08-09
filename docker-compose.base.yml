@@ -47,6 +47,9 @@ x-common-variables: &common-variables
     ADMIN_DASHBOARD_PORT: ${ADMIN_DASHBOARD_PORT}
     ISOLATED_VM_PORT: ${ISOLATED_VM_PORT}
 
+    OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT: ${OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT}
+    OPENTELEMETRY_EXPORTER_OTLP_HEADERS: ${OPENTELEMETRY_EXPORTER_OTLP_HEADERS}
+
 x-common-ui-variables: &common-ui-variables
     <<: *common-variables   
     IS_SERVER: "false"
@@ -172,8 +175,6 @@ services:
         environment: 
             <<: *common-ui-variables
             PORT: ${ACCOUNTS_PORT}
-            OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT: ${CLIENT_OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT}
-            OPENTELEMETRY_EXPORTER_OTLP_HEADERS: ${ACCOUNTS_OPENTELEMETRY_EXPORTER_OTLP_HEADERS}
 
         logging:
             driver: "local"
@@ -188,7 +189,8 @@ services:
         environment:
             <<: *common-server-variables
             PORT: 8547
-            ONEUPTIME_URL: ${LLM_ONEUPTIME_SERVER_URL}
+            HF_TOKEN: ${LLM_SERVER_HUGGINGFACE_TOKEN}
+            HF_MODEL_NAME: ${LLM_SERVER_HUGGINGFACE_MODEL_NAME}
         volumes:
             - ./LLM/Models:/app/Models
         logging:
@@ -203,8 +205,7 @@ services:
         environment:
             <<: *common-ui-variables
             PORT: ${ADMIN_DASHBOARD_PORT}
-            OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT: ${CLIENT_OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT}
-            OPENTELEMETRY_EXPORTER_OTLP_HEADERS: ${ADMIN_DASHBOARD_OPENTELEMETRY_EXPORTER_OTLP_HEADERS}
+
         logging:
             driver: "local"
             options:
@@ -217,8 +218,7 @@ services:
         environment:
             <<: *common-ui-variables
             PORT: ${DASHBOARD_PORT}
-            OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT: ${CLIENT_OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT}
-            OPENTELEMETRY_EXPORTER_OTLP_HEADERS: ${DASHBOARD_OPENTELEMETRY_EXPORTER_OTLP_HEADERS}
+
         logging:
             driver: "local"
             options:
@@ -233,8 +233,6 @@ services:
         environment:
             <<: *common-ui-variables
             PORT: ${STATUS_PAGE_PORT}
-            OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT: ${CLIENT_OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT}
-            OPENTELEMETRY_EXPORTER_OTLP_HEADERS: ${STATUS_PAGE_OPENTELEMETRY_EXPORTER_OTLP_HEADERS}
         logging:
             driver: "local"
             options:
@@ -269,8 +267,6 @@ services:
             INTERNAL_SMTP_EMAIL: ${INTERNAL_SMTP_EMAIL}
             INTERNAL_SMTP_FROM_NAME: ${INTERNAL_SMTP_FROM_NAME}
             INTERNAL_SMTP_PASSWORD: ${INTERNAL_SMTP_PASSWORD}
-            OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT: ${SERVER_OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT}
-            OPENTELEMETRY_EXPORTER_OTLP_HEADERS: ${APP_OPENTELEMETRY_EXPORTER_OTLP_HEADERS}
         logging:
             driver: "local"
             options:
@@ -291,8 +287,6 @@ services:
             PROBE_CUSTOM_CODE_MONITOR_SCRIPT_TIMEOUT_IN_MS: ${GLOBAL_PROBE_1_CUSTOM_CODE_MONITOR_SCRIPT_TIMEOUT_IN_MS}
             ONEUPTIME_URL: ${GLOBAL_PROBE_1_ONEUPTIME_URL}
             PROBE_MONITOR_FETCH_LIMIT: ${GLOBAL_PROBE_1_MONITOR_FETCH_LIMIT}
-            OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT: ${SERVER_OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT}
-            OPENTELEMETRY_EXPORTER_OTLP_HEADERS: ${PROBE_OPENTELEMETRY_EXPORTER_OTLP_HEADERS}
         logging:
             driver: "local"
             options:
@@ -313,8 +307,6 @@ services:
             PROBE_SYNTHETIC_MONITOR_SCRIPT_TIMEOUT_IN_MS: ${GLOBAL_PROBE_2_SYNTHETIC_MONITOR_SCRIPT_TIMEOUT_IN_MS}
             PROBE_CUSTOM_CODE_MONITOR_SCRIPT_TIMEOUT_IN_MS: ${GLOBAL_PROBE_2_CUSTOM_CODE_MONITOR_SCRIPT_TIMEOUT_IN_MS}
             PROBE_MONITOR_FETCH_LIMIT: ${GLOBAL_PROBE_2_MONITOR_FETCH_LIMIT}
-            OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT: ${SERVER_OPENTELEMETRY_EXPORTER_OTLP_ENDPOINT}
-            OPENTELEMETRY_EXPORTER_OTLP_HEADERS: ${PROBE_OPENTELEMETRY_EXPORTER_OTLP_HEADERS}
         logging:
             driver: "local"
             options:
@@ -364,7 +356,24 @@ services:
             driver: "local"
             options:
                 max-size: "1000m"
-            
+
+    copilot:
+        networks:
+          - oneuptime
+        restart: always
+        environment:
+            ONEUPTIME_URL: ${COPILOT_ONEUPTIME_URL}
+            ONEUPTIME_REPOSITORY_SECRET_KEY: ${COPILOT_ONEUPTIME_REPOSITORY_SECRET_KEY}
+            CODE_REPOSITORY_PASSWORD: ${COPILOT_CODE_REPOSITORY_PASSWORD}
+            CODE_REPOSITORY_USERNAME: ${COPILOT_CODE_REPOSITORY_USERNAME}
+            ONEUPTIME_LLM_SERVER_URL: ${COPILOT_ONEUPTIME_LLM_SERVER_URL}
+            DISABLE_COPILOT: ${DISABLE_COPILOT}
+            OPENAI_API_KEY: ${COPILOT_OPENAI_API_KEY}
+            LOG_LEVEL: ${LOG_LEVEL}
+        logging:
+            driver: "local"
+            options:
+                max-size: "1000m"       
     
     e2e:
         restart: "no"

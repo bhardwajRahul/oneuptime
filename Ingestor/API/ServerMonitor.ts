@@ -5,16 +5,16 @@ import MonitorType from "Common/Types/Monitor/MonitorType";
 import ServerMonitorResponse from "Common/Types/Monitor/ServerMonitor/ServerMonitorResponse";
 import ObjectID from "Common/Types/ObjectID";
 import ProbeApiIngestResponse from "Common/Types/Probe/ProbeApiIngestResponse";
-import MonitorService from "CommonServer/Services/MonitorService";
+import MonitorService from "Common/Server/Services/MonitorService";
 import Express, {
   ExpressRequest,
   ExpressResponse,
   ExpressRouter,
   NextFunction,
-} from "CommonServer/Utils/Express";
-import ProbeMonitorResponseService from "CommonServer/Utils/Probe/ProbeMonitorResponse";
-import Response from "CommonServer/Utils/Response";
-import Monitor from "Model/Models/Monitor";
+} from "Common/Server/Utils/Express";
+import MonitorResourceUtil from "Common/Server/Utils/Monitor/MonitorResource";
+import Response from "Common/Server/Utils/Response";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
 
 const router: ExpressRouter = Express.getRouter();
 
@@ -109,9 +109,7 @@ router.post(
 
       // process probe response here.
       const probeApiIngestResponse: ProbeApiIngestResponse =
-        await ProbeMonitorResponseService.processProbeResponse(
-          serverMonitorResponse,
-        );
+        await MonitorResourceUtil.monitorResource(serverMonitorResponse);
 
       return Response.sendJsonObjectResponse(req, res, {
         probeApiIngestResponse: probeApiIngestResponse,

@@ -1,29 +1,36 @@
+import ArrayUtil from "Common/Types/ArrayUtil";
 import TelemetryIngest, {
   TelemetryRequest,
 } from "../Middleware/TelemetryIngest";
 import OTelIngestService, {
   OtelAggregationTemporality,
+  TelemetryServiceDataIngested,
 } from "../Service/OTelIngest";
 import OneUptimeDate from "Common/Types/Date";
 import BadRequestException from "Common/Types/Exception/BadRequestException";
 import { JSONArray, JSONObject } from "Common/Types/JSON";
+import JSONFunctions from "Common/Types/JSONFunctions";
 import ProductType from "Common/Types/MeteredPlan/ProductType";
+import TelemetryType from "Common/Types/Telemetry/TelemetryType";
 import Text from "Common/Types/Text";
-import LogService from "CommonServer/Services/LogService";
-import MetricService from "CommonServer/Services/MetricService";
-import SpanService from "CommonServer/Services/SpanService";
+import LogService from "Common/Server/Services/LogService";
+import MetricService from "Common/Server/Services/MetricService";
+import SpanService from "Common/Server/Services/SpanService";
 import Express, {
   ExpressRequest,
   ExpressResponse,
   ExpressRouter,
   NextFunction,
-} from "CommonServer/Utils/Express";
-import logger from "CommonServer/Utils/Logger";
-import Response from "CommonServer/Utils/Response";
-import Log, { LogSeverity } from "Model/AnalyticsModels/Log";
-import Metric, { MetricPointType } from "Model/AnalyticsModels/Metric";
-import Span, { SpanKind, SpanStatus } from "Model/AnalyticsModels/Span";
+} from "Common/Server/Utils/Express";
+import logger from "Common/Server/Utils/Logger";
+import Response from "Common/Server/Utils/Response";
+import Log from "Common/Models/AnalyticsModels/Log";
+import Metric, { MetricPointType } from "Common/Models/AnalyticsModels/Metric";
+import Span, { SpanKind, SpanStatus } from "Common/Models/AnalyticsModels/Span";
 import protobuf from "protobufjs";
+import Dictionary from "Common/Types/Dictionary";
+import ObjectID from "Common/Types/ObjectID";
+import LogSeverity from "Common/Types/Log/LogSeverity";
 
 // Load proto file for OTel
 
@@ -101,12 +108,9 @@ router.post(
     next: NextFunction,
   ): Promise<void> => {
     try {
-      if (
-        !(req as TelemetryRequest).projectId ||
-        !(req as TelemetryRequest).serviceId
-      ) {
+      if (!(req as TelemetryRequest).projectId) {
         throw new BadRequestException(
-          "Invalid request - projectId or serviceId not found in request.",
+          "Invalid request - projectId not found in request.",
         );
       }
 
@@ -117,7 +121,38 @@ router.post(
 
       const dbSpans: Array<Span> = [];
 
+      let attributes: string[] = [];
+
+      const serviceDictionary: Dictionary<TelemetryServiceDataIngested> = {};
+
       for (const resourceSpan of resourceSpans) {
+        // get service name from resourceSpan attributes
+
+        const serviceName: string = getServiceNameFromAttributes(
+          (resourceSpan["resource"] as JSONObject)["attributes"] as JSONArray,
+        );
+
+        if (!serviceDictionary[serviceName]) {
+          const service: {
+            serviceId: ObjectID;
+            dataRententionInDays: number;
+          } = await OTelIngestService.telemetryServiceFromName({
+            serviceName: serviceName,
+            projectId: (req as TelemetryRequest).projectId,
+          });
+
+          serviceDictionary[serviceName] = {
+            serviceName: serviceName,
+            serviceId: service.serviceId,
+            dataRententionInDays: service.dataRententionInDays,
+            dataIngestedInGB: 0,
+          };
+        }
+
+        // size of req.body in bytes.
+        const sizeInGb: number = JSONFunctions.getSizeOfJSONinGB(resourceSpan);
+        serviceDictionary[serviceName]!.dataIngestedInGB += sizeInGb;
+
         const scopeSpans: JSONArray = resourceSpan["scopeSpans"] as JSONArray;
 
         for (const scopeSpan of scopeSpans) {
@@ -138,11 +173,13 @@ router.post(
                 ] as JSONArray
               ).length > 0
             ) {
-              attributesObject["resource"] = OTelIngestService.getAttributes(
-                (resourceSpan["resource"] as JSONObject)[
+              attributesObject["resource"] = OTelIngestService.getAttributes({
+                items: (resourceSpan["resource"] as JSONObject)[
                   "attributes"
                 ] as JSONArray,
-              );
+                telemetryServiceName: serviceName,
+                telemetryServiceId: serviceDictionary[serviceName]!.serviceId!,
+              });
             }
 
             // scope attributes
@@ -156,13 +193,15 @@ router.post(
 
             dbSpan.attributes = {
               ...attributesObject,
-              ...OTelIngestService.getAttributes(
-                span["attributes"] as JSONArray,
-              ),
+              ...OTelIngestService.getAttributes({
+                items: span["attributes"] as JSONArray,
+                telemetryServiceName: serviceName,
+                telemetryServiceId: serviceDictionary[serviceName]!.serviceId!,
+              }),
             };
 
             dbSpan.projectId = (req as TelemetryRequest).projectId;
-            dbSpan.serviceId = (req as TelemetryRequest).serviceId;
+            dbSpan.serviceId = serviceDictionary[serviceName]!.serviceId!;
 
             dbSpan.spanId = Text.convertBase64ToHex(span["spanId"] as string);
             dbSpan.traceId = Text.convertBase64ToHex(span["traceId"] as string);
@@ -241,9 +280,12 @@ router.post(
                   time: eventTime,
                   timeUnixNano: eventTimeUnixNano,
                   name: event["name"] as string,
-                  attributes: OTelIngestService.getAttributes(
-                    event["attributes"] as JSONArray,
-                  ),
+                  attributes: OTelIngestService.getAttributes({
+                    items: event["attributes"] as JSONArray,
+                    telemetryServiceName: serviceName,
+                    telemetryServiceId:
+                      serviceDictionary[serviceName]!.serviceId!,
+                  }),
                 });
               }
             }
@@ -257,12 +299,22 @@ router.post(
                 dbSpan.links.push({
                   traceId: Text.convertBase64ToHex(link["traceId"] as string),
                   spanId: Text.convertBase64ToHex(link["spanId"] as string),
-                  attributes: OTelIngestService.getAttributes(
-                    link["attributes"] as JSONArray,
-                  ),
+                  attributes: OTelIngestService.getAttributes({
+                    items: link["attributes"] as JSONArray,
+                    telemetryServiceName: serviceName,
+                    telemetryServiceId:
+                      serviceDictionary[serviceName]!.serviceId!,
+                  }),
                 });
               }
             }
+
+            dbSpan.attributes = JSONFunctions.flattenObject(dbSpan.attributes);
+
+            attributes = [
+              ...attributes,
+              ...Object.keys(dbSpan.attributes || {}),
+            ];
 
             dbSpans.push(dbSpan);
           }
@@ -274,6 +326,22 @@ router.post(
         props: {
           isRoot: true,
         },
+      });
+
+      OTelIngestService.indexAttributes({
+        attributes: ArrayUtil.removeDuplicates(attributes),
+        projectId: (req as TelemetryRequest).projectId,
+        telemetryType: TelemetryType.Trace,
+      }).catch((err: Error) => {
+        logger.error(err);
+      });
+
+      OTelIngestService.recordDataIngestedUsgaeBilling({
+        services: serviceDictionary,
+        projectId: (req as TelemetryRequest).projectId,
+        productType: ProductType.Traces,
+      }).catch((err: Error) => {
+        logger.error(err);
       });
 
       return Response.sendEmptySuccessResponse(req, res);
@@ -293,12 +361,9 @@ router.post(
     next: NextFunction,
   ): Promise<void> => {
     try {
-      if (
-        !(req as TelemetryRequest).projectId ||
-        !(req as TelemetryRequest).serviceId
-      ) {
+      if (!(req as TelemetryRequest).projectId) {
         throw new BadRequestException(
-          "Invalid request - projectId or serviceId not found in request.",
+          "Invalid request - projectId not found in request.",
         );
       }
 
@@ -310,7 +375,40 @@ router.post(
 
       const dbMetrics: Array<Metric> = new Array<Metric>();
 
+      let attributes: string[] = [];
+
+      const serviceDictionary: Dictionary<TelemetryServiceDataIngested> = {};
+
       for (const resourceMetric of resourceMetrics) {
+        // get service name from resourceMetric attributes
+
+        const serviceName: string = getServiceNameFromAttributes(
+          (resourceMetric["resource"] as JSONObject)["attributes"] as JSONArray,
+        );
+
+        if (!serviceDictionary[serviceName]) {
+          const service: {
+            serviceId: ObjectID;
+            dataRententionInDays: number;
+          } = await OTelIngestService.telemetryServiceFromName({
+            serviceName: serviceName,
+            projectId: (req as TelemetryRequest).projectId,
+          });
+
+          serviceDictionary[serviceName] = {
+            serviceName: serviceName,
+            serviceId: service.serviceId,
+            dataRententionInDays: service.dataRententionInDays,
+            dataIngestedInGB: 0,
+          };
+        }
+
+        // size of req.body in bytes.
+        const sizeInGb: number =
+          JSONFunctions.getSizeOfJSONinGB(resourceMetric);
+
+        serviceDictionary[serviceName]!.dataIngestedInGB += sizeInGb;
+
         const scopeMetrics: JSONArray = resourceMetric[
           "scopeMetrics"
         ] as JSONArray;
@@ -327,7 +425,7 @@ router.post(
             const dbMetric: Metric = new Metric();
 
             dbMetric.projectId = (req as TelemetryRequest).projectId;
-            dbMetric.serviceId = (req as TelemetryRequest).serviceId;
+            dbMetric.serviceId = serviceDictionary[serviceName]!.serviceId!;
 
             dbMetric.name = metricName;
             dbMetric.description = metricDescription;
@@ -344,9 +442,12 @@ router.post(
               metric["attributes"].length > 0
             ) {
               attributesObject = {
-                ...OTelIngestService.getAttributes(
-                  metric["attributes"] as JSONArray,
-                ),
+                ...OTelIngestService.getAttributes({
+                  items: metric["attributes"] as JSONArray,
+                  telemetryServiceName: serviceName,
+                  telemetryServiceId:
+                    serviceDictionary[serviceName]!.serviceId!,
+                }),
               };
             }
 
@@ -364,11 +465,14 @@ router.post(
             ) {
               attributesObject = {
                 ...attributesObject,
-                resource: OTelIngestService.getAttributes(
-                  (resourceMetric["resource"] as JSONObject)[
+                resource: OTelIngestService.getAttributes({
+                  items: (resourceMetric["resource"] as JSONObject)[
                     "attributes"
                   ] as JSONArray,
-                ),
+                  telemetryServiceName: serviceName,
+                  telemetryServiceId:
+                    serviceDictionary[serviceName]!.serviceId!,
+                }),
               };
             }
 
@@ -404,9 +508,16 @@ router.post(
                     isMonotonic: (metric["sum"] as JSONObject)[
                       "isMonotonic"
                     ] as boolean | undefined,
+                    telemetryServiceId:
+                      serviceDictionary[serviceName]!.serviceId!,
+                    telemetryServiceName: serviceName,
                   });
 
                 sumMetric.metricPointType = MetricPointType.Sum;
+
+                sumMetric.attributes = JSONFunctions.flattenObject(
+                  sumMetric.attributes || {},
+                );
 
                 dbMetrics.push(sumMetric);
               }
@@ -429,9 +540,16 @@ router.post(
                     isMonotonic: (metric["gauge"] as JSONObject)[
                       "isMonotonic"
                     ] as boolean | undefined,
+                    telemetryServiceId:
+                      serviceDictionary[serviceName]!.serviceId!,
+                    telemetryServiceName: serviceName,
                   });
 
                 guageMetric.metricPointType = MetricPointType.Gauge;
+
+                guageMetric.attributes = JSONFunctions.flattenObject(
+                  guageMetric.attributes || {},
+                );
 
                 dbMetrics.push(guageMetric);
               }
@@ -454,9 +572,21 @@ router.post(
                     isMonotonic: (metric["histogram"] as JSONObject)[
                       "isMonotonic"
                     ] as boolean | undefined,
+                    telemetryServiceId:
+                      serviceDictionary[serviceName]!.serviceId!,
+                    telemetryServiceName: serviceName,
                   });
 
                 histogramMetric.metricPointType = MetricPointType.Histogram;
+
+                histogramMetric.attributes = JSONFunctions.flattenObject(
+                  histogramMetric.attributes || {},
+                );
+
+                attributes = [
+                  ...attributes,
+                  ...Object.keys(histogramMetric.attributes || {}),
+                ];
 
                 dbMetrics.push(histogramMetric);
               }
@@ -473,6 +603,22 @@ router.post(
         props: {
           isRoot: true,
         },
+      });
+
+      OTelIngestService.indexAttributes({
+        attributes: ArrayUtil.removeDuplicates(attributes),
+        projectId: (req as TelemetryRequest).projectId,
+        telemetryType: TelemetryType.Metric,
+      }).catch((err: Error) => {
+        logger.error(err);
+      });
+
+      OTelIngestService.recordDataIngestedUsgaeBilling({
+        services: serviceDictionary,
+        projectId: (req as TelemetryRequest).projectId,
+        productType: ProductType.Metrics,
+      }).catch((err: Error) => {
+        logger.error(err);
       });
 
       return Response.sendEmptySuccessResponse(req, res);
@@ -492,12 +638,9 @@ router.post(
     next: NextFunction,
   ): Promise<void> => {
     try {
-      if (
-        !(req as TelemetryRequest).projectId ||
-        !(req as TelemetryRequest).serviceId
-      ) {
+      if (!(req as TelemetryRequest).projectId) {
         throw new BadRequestException(
-          "Invalid request - projectId or serviceId not found in request.",
+          "Invalid request - projectId  not found in request.",
         );
       }
 
@@ -507,7 +650,38 @@ router.post(
 
       const dbLogs: Array<Log> = [];
 
+      let attributes: string[] = [];
+
+      const serviceDictionary: Dictionary<TelemetryServiceDataIngested> = {};
+
       for (const resourceLog of resourceLogs) {
+        // get service name from resourceLog attributes
+
+        const serviceName: string = getServiceNameFromAttributes(
+          (resourceLog["resource"] as JSONObject)["attributes"] as JSONArray,
+        );
+
+        if (!serviceDictionary[serviceName]) {
+          const service: {
+            serviceId: ObjectID;
+            dataRententionInDays: number;
+          } = await OTelIngestService.telemetryServiceFromName({
+            serviceName: serviceName,
+            projectId: (req as TelemetryRequest).projectId,
+          });
+
+          serviceDictionary[serviceName] = {
+            serviceName: serviceName,
+            serviceId: service.serviceId,
+            dataRententionInDays: service.dataRententionInDays,
+            dataIngestedInGB: 0,
+          };
+        }
+
+        // size of req.body in bytes.
+        const sizeInGb: number = JSONFunctions.getSizeOfJSONinGB(resourceLog);
+        serviceDictionary[serviceName]!.dataIngestedInGB += sizeInGb;
+
         const scopeLogs: JSONArray = resourceLog["scopeLogs"] as JSONArray;
 
         for (const scopeLog of scopeLogs) {
@@ -547,11 +721,14 @@ router.post(
             ) {
               attributesObject = {
                 ...attributesObject,
-                resource: OTelIngestService.getAttributes(
-                  (resourceLog["resource"] as JSONObject)[
+                resource: OTelIngestService.getAttributes({
+                  items: (resourceLog["resource"] as JSONObject)[
                     "attributes"
                   ] as JSONArray,
-                ),
+                  telemetryServiceName: serviceName,
+                  telemetryServiceId:
+                    serviceDictionary[serviceName]!.serviceId!,
+                }),
               };
             }
 
@@ -567,13 +744,15 @@ router.post(
 
             dbLog.attributes = {
               ...attributesObject,
-              ...OTelIngestService.getAttributes(
-                log["attributes"] as JSONArray,
-              ),
+              ...OTelIngestService.getAttributes({
+                items: log["attributes"] as JSONArray,
+                telemetryServiceName: serviceName,
+                telemetryServiceId: serviceDictionary[serviceName]!.serviceId!,
+              }),
             };
 
             dbLog.projectId = (req as TelemetryRequest).projectId;
-            dbLog.serviceId = (req as TelemetryRequest).serviceId;
+            dbLog.serviceId = serviceDictionary[serviceName]!.serviceId!;
 
             dbLog.timeUnixNano = log["timeUnixNano"] as number;
             dbLog.time = OneUptimeDate.fromUnixNano(
@@ -632,6 +811,13 @@ router.post(
             dbLog.traceId = Text.convertBase64ToHex(log["traceId"] as string);
             dbLog.spanId = Text.convertBase64ToHex(log["spanId"] as string);
 
+            dbLog.attributes = JSONFunctions.flattenObject(dbLog.attributes);
+
+            attributes = [
+              ...attributes,
+              ...Object.keys(dbLog.attributes || {}),
+            ];
+
             dbLogs.push(dbLog);
           }
         }
@@ -644,11 +830,49 @@ router.post(
         },
       });
 
+      OTelIngestService.indexAttributes({
+        attributes: ArrayUtil.removeDuplicates(attributes),
+        projectId: (req as TelemetryRequest).projectId,
+        telemetryType: TelemetryType.Log,
+      }).catch((err: Error) => {
+        logger.error(err);
+      });
+
+      OTelIngestService.recordDataIngestedUsgaeBilling({
+        services: serviceDictionary,
+        projectId: (req as TelemetryRequest).projectId,
+        productType: ProductType.Logs,
+      }).catch((err: Error) => {
+        logger.error(err);
+      });
+
       return Response.sendEmptySuccessResponse(req, res);
     } catch (err) {
       return next(err);
     }
   },
 );
+
+type GetServiceNameFromAttributesFunction = (attributes: JSONArray) => string;
+
+const getServiceNameFromAttributes: GetServiceNameFromAttributesFunction = (
+  attributes: JSONArray,
+): string => {
+  for (const attribute of attributes) {
+    if (
+      attribute["key"] === "service.name" &&
+      attribute["value"] &&
+      (attribute["value"] as JSONObject)["stringValue"]
+    ) {
+      if (
+        typeof (attribute["value"] as JSONObject)["stringValue"] === "string"
+      ) {
+        return (attribute["value"] as JSONObject)["stringValue"] as string;
+      }
+    }
+  }
+
+  return "Unknown Service";
+};
 
 export default router;

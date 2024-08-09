@@ -1,5 +1,5 @@
 import BadDataException from "Common/Types/Exception/BadDataException";
-import CopilotAction from "Model/Models/CopilotAction";
+import CopilotAction from "Common/Models/DatabaseModels/CopilotAction";
 import { GetOneUptimeURL, GetRepositorySecretKey } from "../Config";
 import URL from "Common/Types/API/URL";
 import HTTPErrorResponse from "Common/Types/API/HTTPErrorResponse";
@@ -7,7 +7,7 @@ import { JSONArray, JSONObject } from "Common/Types/JSON";
 import HTTPResponse from "Common/Types/API/HTTPResponse";
 import API from "Common/Utils/API";
 import ObjectID from "Common/Types/ObjectID";
-import logger from "CommonServer/Utils/Logger";
+import logger from "Common/Server/Utils/Logger";
 
 export default class CopilotActionUtil {
   public static async getCopilotActions(data: {

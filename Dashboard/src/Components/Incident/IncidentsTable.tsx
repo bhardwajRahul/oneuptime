@@ -4,37 +4,37 @@ import EventName from "../../Utils/EventName";
 import DashboardNavigation from "../../Utils/Navigation";
 import ProjectUser from "../../Utils/ProjectUser";
 import IncidentElement from "./Incident";
-import BaseModel from "Common/Models/BaseModel";
+import BaseModel from "Common/Models/DatabaseModels/DatabaseBaseModel/DatabaseBaseModel";
 import { Black } from "Common/Types/BrandColors";
 import { LIMIT_PER_PROJECT } from "Common/Types/Database/LimitMax";
 import IconProp from "Common/Types/Icon/IconProp";
 import { JSONObject } from "Common/Types/JSON";
 import ObjectID from "Common/Types/ObjectID";
-import { ButtonStyleType } from "CommonUI/src/Components/Button/Button";
-import BasicFormModal from "CommonUI/src/Components/FormModal/BasicFormModal";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import FormValues from "CommonUI/src/Components/Forms/Types/FormValues";
-import ConfirmModal from "CommonUI/src/Components/Modal/ConfirmModal";
-import { ModalTableBulkDefaultActions } from "CommonUI/src/Components/ModelTable/BaseModelTable";
-import ModelTable from "CommonUI/src/Components/ModelTable/ModelTable";
-import Pill from "CommonUI/src/Components/Pill/Pill";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import API from "CommonUI/src/Utils/API/API";
-import Query from "CommonUI/src/Utils/BaseDatabase/Query";
-import DropdownUtil from "CommonUI/src/Utils/Dropdown";
-import GlobalEvents from "CommonUI/src/Utils/GlobalEvents";
-import ModelAPI, { ListResult } from "CommonUI/src/Utils/ModelAPI/ModelAPI";
-import Incident from "Model/Models/Incident";
-import IncidentSeverity from "Model/Models/IncidentSeverity";
-import IncidentState from "Model/Models/IncidentState";
-import IncidentTemplate from "Model/Models/IncidentTemplate";
-import IncidentTemplateOwnerTeam from "Model/Models/IncidentTemplateOwnerTeam";
-import IncidentTemplateOwnerUser from "Model/Models/IncidentTemplateOwnerUser";
-import Label from "Model/Models/Label";
-import Monitor from "Model/Models/Monitor";
-import MonitorStatus from "Model/Models/MonitorStatus";
-import OnCallDutyPolicy from "Model/Models/OnCallDutyPolicy";
-import Team from "Model/Models/Team";
+import { ButtonStyleType } from "Common/UI/Components/Button/Button";
+import BasicFormModal from "Common/UI/Components/FormModal/BasicFormModal";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import FormValues from "Common/UI/Components/Forms/Types/FormValues";
+import ConfirmModal from "Common/UI/Components/Modal/ConfirmModal";
+import { ModalTableBulkDefaultActions } from "Common/UI/Components/ModelTable/BaseModelTable";
+import ModelTable from "Common/UI/Components/ModelTable/ModelTable";
+import Pill from "Common/UI/Components/Pill/Pill";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import API from "Common/UI/Utils/API/API";
+import Query from "Common/UI/Utils/BaseDatabase/Query";
+import DropdownUtil from "Common/UI/Utils/Dropdown";
+import GlobalEvents from "Common/UI/Utils/GlobalEvents";
+import ModelAPI, { ListResult } from "Common/UI/Utils/ModelAPI/ModelAPI";
+import Incident from "Common/Models/DatabaseModels/Incident";
+import IncidentSeverity from "Common/Models/DatabaseModels/IncidentSeverity";
+import IncidentState from "Common/Models/DatabaseModels/IncidentState";
+import IncidentTemplate from "Common/Models/DatabaseModels/IncidentTemplate";
+import IncidentTemplateOwnerTeam from "Common/Models/DatabaseModels/IncidentTemplateOwnerTeam";
+import IncidentTemplateOwnerUser from "Common/Models/DatabaseModels/IncidentTemplateOwnerUser";
+import Label from "Common/Models/DatabaseModels/Label";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
+import MonitorStatus from "Common/Models/DatabaseModels/MonitorStatus";
+import OnCallDutyPolicy from "Common/Models/DatabaseModels/OnCallDutyPolicy";
+import Team from "Common/Models/DatabaseModels/Team";
 import React, { FunctionComponent, ReactElement, useState } from "react";
 import RouteMap, { RouteUtil } from "../../Utils/RouteMap";
 import PageMap from "../../Utils/PageMap";
@@ -45,6 +45,7 @@ export interface ComponentProps {
   title?: string | undefined;
   description?: string | undefined;
   createInitialValues?: FormValues<Incident> | undefined;
+  disableCreate?: boolean | undefined;
 }
 
 const IncidentsTable: FunctionComponent<ComponentProps> = (
@@ -202,7 +203,7 @@ const IncidentsTable: FunctionComponent<ComponentProps> = (
         }}
         query={props.query || {}}
         isEditable={false}
-        isCreateable={true}
+        isCreateable={!props.disableCreate}
         isViewable={true}
         createInitialValues={
           Object.keys(initialValuesForIncident).length > 0
@@ -211,17 +212,19 @@ const IncidentsTable: FunctionComponent<ComponentProps> = (
         }
         cardProps={{
           title: props.title || "Incidents",
-          buttons: [
-            {
-              title: "Create from Template",
-              icon: IconProp.Template,
-              buttonStyle: ButtonStyleType.OUTLINE,
-              onClick: async (): Promise<void> => {
-                setShowIncidentTemplateModal(true);
-                await fetchIncidentTemplates();
-              },
-            },
-          ],
+          buttons: props.disableCreate
+            ? []
+            : [
+                {
+                  title: "Create from Template",
+                  icon: IconProp.Template,
+                  buttonStyle: ButtonStyleType.OUTLINE,
+                  onClick: async (): Promise<void> => {
+                    setShowIncidentTemplateModal(true);
+                    await fetchIncidentTemplates();
+                  },
+                },
+              ],
           description:
             props.description ||
             "Here is a list of incidents for this project.",
@@ -301,7 +304,7 @@ const IncidentsTable: FunctionComponent<ComponentProps> = (
               labelField: "name",
               valueField: "_id",
             },
-            required: true,
+            required: false,
             placeholder: "Monitors affected",
           },
           {

@@ -9,8 +9,8 @@ import {
 import MonitorType from "Common/Types/Monitor/MonitorType";
 import BrowserType from "Common/Types/Monitor/SyntheticMonitors/BrowserType";
 import ScreenSizeType from "Common/Types/Monitor/SyntheticMonitors/ScreenSizeType";
-import { DropdownOption } from "CommonUI/src/Components/Dropdown/Dropdown";
-import DropdownUtil from "CommonUI/src/Utils/Dropdown";
+import { DropdownOption } from "Common/UI/Components/Dropdown/Dropdown";
+import DropdownUtil from "Common/UI/Utils/Dropdown";
 
 export default class CriteriaFilterUtil {
   public static getEvaluateOverTimeMinutesOptions(): Array<DropdownOption> {
@@ -225,6 +225,18 @@ export default class CriteriaFilterUtil {
       });
     }
 
+    if (monitorType === MonitorType.Logs) {
+      options = options.filter((i: DropdownOption) => {
+        return i.value === CheckOn.LogCount;
+      });
+    }
+
+    if (monitorType === MonitorType.Traces) {
+      options = options.filter((i: DropdownOption) => {
+        return i.value === CheckOn.SpanCount;
+      });
+    }
+
     return options;
   }
 
@@ -245,6 +257,18 @@ export default class CriteriaFilterUtil {
           i.value === FilterType.LessThan ||
           i.value === FilterType.LessThanOrEqualTo ||
           i.value === FilterType.GreaterThanOrEqualTo
+        );
+      });
+    }
+
+    if (checkOn === CheckOn.LogCount) {
+      options = options.filter((i: DropdownOption) => {
+        return (
+          i.value === FilterType.GreaterThan ||
+          i.value === FilterType.LessThan ||
+          i.value === FilterType.LessThanOrEqualTo ||
+          i.value === FilterType.GreaterThanOrEqualTo ||
+          i.value === FilterType.EqualTo
         );
       });
     }
@@ -467,6 +491,10 @@ export default class CriteriaFilterUtil {
 
     if (checkOn === CheckOn.ServerProcessPID) {
       return "1234";
+    }
+
+    if (checkOn === CheckOn.LogCount) {
+      return "1";
     }
 
     if (checkOn === CheckOn.ServerProcessCommand) {

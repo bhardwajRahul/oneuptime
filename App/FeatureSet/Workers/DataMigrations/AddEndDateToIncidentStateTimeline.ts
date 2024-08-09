@@ -1,13 +1,13 @@
 import DataMigrationBase from "./DataMigrationBase";
 import SortOrder from "Common/Types/BaseDatabase/SortOrder";
 import LIMIT_MAX from "Common/Types/Database/LimitMax";
-import IncidentService from "CommonServer/Services/IncidentService";
-import IncidentStateTimelineService from "CommonServer/Services/IncidentStateTimelineService";
-import ProjectService from "CommonServer/Services/ProjectService";
-import QueryHelper from "CommonServer/Types/Database/QueryHelper";
-import Incident from "Model/Models/Incident";
-import IncidentStateTimeline from "Model/Models/IncidentStateTimeline";
-import Project from "Model/Models/Project";
+import IncidentService from "Common/Server/Services/IncidentService";
+import IncidentStateTimelineService from "Common/Server/Services/IncidentStateTimelineService";
+import ProjectService from "Common/Server/Services/ProjectService";
+import QueryHelper from "Common/Server/Types/Database/QueryHelper";
+import Incident from "Common/Models/DatabaseModels/Incident";
+import IncidentStateTimeline from "Common/Models/DatabaseModels/IncidentStateTimeline";
+import Project from "Common/Models/DatabaseModels/Project";
 
 export default class AddEndDateToIncidentStateTimeline extends DataMigrationBase {
   public constructor() {

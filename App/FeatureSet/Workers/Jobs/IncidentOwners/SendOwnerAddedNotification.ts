@@ -8,17 +8,17 @@ import NotificationSettingEventType from "Common/Types/NotificationSetting/Notif
 import ObjectID from "Common/Types/ObjectID";
 import { SMSMessage } from "Common/Types/SMS/SMS";
 import { EVERY_MINUTE } from "Common/Utils/CronTime";
-import IncidentOwnerTeamService from "CommonServer/Services/IncidentOwnerTeamService";
-import IncidentOwnerUserService from "CommonServer/Services/IncidentOwnerUserService";
-import IncidentService from "CommonServer/Services/IncidentService";
-import TeamMemberService from "CommonServer/Services/TeamMemberService";
-import UserNotificationSettingService from "CommonServer/Services/UserNotificationSettingService";
-import Markdown, { MarkdownContentType } from "CommonServer/Types/Markdown";
-import Incident from "Model/Models/Incident";
-import IncidentOwnerTeam from "Model/Models/IncidentOwnerTeam";
-import IncidentOwnerUser from "Model/Models/IncidentOwnerUser";
-import Monitor from "Model/Models/Monitor";
-import User from "Model/Models/User";
+import IncidentOwnerTeamService from "Common/Server/Services/IncidentOwnerTeamService";
+import IncidentOwnerUserService from "Common/Server/Services/IncidentOwnerUserService";
+import IncidentService from "Common/Server/Services/IncidentService";
+import TeamMemberService from "Common/Server/Services/TeamMemberService";
+import UserNotificationSettingService from "Common/Server/Services/UserNotificationSettingService";
+import Markdown, { MarkdownContentType } from "Common/Server/Types/Markdown";
+import Incident from "Common/Models/DatabaseModels/Incident";
+import IncidentOwnerTeam from "Common/Models/DatabaseModels/IncidentOwnerTeam";
+import IncidentOwnerUser from "Common/Models/DatabaseModels/IncidentOwnerUser";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
+import User from "Common/Models/DatabaseModels/User";
 
 RunCron(
   "IncidentOwner:SendOwnerAddedEmail",

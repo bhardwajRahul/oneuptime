@@ -2,24 +2,94 @@ import LabelsElement from "../../../../Components/Label/Labels";
 import PageComponentProps from "../../../PageComponentProps";
 import CodeRepositoryType from "Common/Types/CodeRepository/CodeRepositoryType";
 import ObjectID from "Common/Types/ObjectID";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import CardModelDetail from "CommonUI/src/Components/ModelDetail/CardModelDetail";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import DropdownUtil from "CommonUI/src/Utils/Dropdown";
-import Navigation from "CommonUI/src/Utils/Navigation";
-import CodeRepository from "Model/Models/CodeRepository";
-import Label from "Model/Models/Label";
-import React, { Fragment, FunctionComponent, ReactElement } from "react";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import CardModelDetail from "Common/UI/Components/ModelDetail/CardModelDetail";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import DropdownUtil from "Common/UI/Utils/Dropdown";
+import Navigation from "Common/UI/Utils/Navigation";
+import CopilotCodeRepository from "Common/Models/DatabaseModels/CopilotCodeRepository";
+import Label from "Common/Models/DatabaseModels/Label";
+import React, {
+  Fragment,
+  FunctionComponent,
+  ReactElement,
+  useEffect,
+  useState,
+} from "react";
+import CopilotLastRunAt from "../../../../Components/Copilot/LastRunMessage";
+import ModelAPI from "Common/UI/Utils/ModelAPI/ModelAPI";
+import PageMap from "../../../../Utils/PageMap";
+import ServiceCopilotCodeRepository from "Common/Models/DatabaseModels/ServiceCopilotCodeRepository";
+import ErrorMessage from "Common/UI/Components/ErrorMessage/ErrorMessage";
+import API from "Common/UI/Utils/API/API";
+import Alert, { AlertType } from "Common/UI/Components/Alerts/Alert";
+import RouteMap, { RouteUtil } from "../../../../Utils/RouteMap";
 
-const StatusPageView: FunctionComponent<
+const CopilotPageView: FunctionComponent<
   PageComponentProps
 > = (): ReactElement => {
   const modelId: ObjectID = Navigation.getLastParamAsObjectID();
 
+  const [codeRepository, setCodeRepository] =
+    useState<CopilotCodeRepository | null>(null);
+
+  const [serviceCount, setServiceCount] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  type FetchServiceCount = () => Promise<void>;
+
+  const fetchServiceCount: FetchServiceCount = async (): Promise<void> => {
+    try {
+      const count: number = await ModelAPI.count<ServiceCopilotCodeRepository>({
+        modelType: ServiceCopilotCodeRepository,
+        query: {
+          codeRepositoryId: modelId,
+        },
+      });
+
+      setServiceCount(count);
+    } catch (error: unknown) {
+      setError(API.getFriendlyMessage(error));
+    }
+  };
+
+  useEffect(() => {
+    fetchServiceCount().catch((error: unknown) => {
+      setError(API.getFriendlyMessage(error));
+    });
+  }, []);
+
+  if (error) {
+    return <ErrorMessage error={error} />;
+  }
+
   return (
     <Fragment>
-      {/* CodeRepository View  */}
-      <CardModelDetail<CodeRepository>
+      {/* CopilotCodeRepository View  */}
+
+      {serviceCount !== null && serviceCount === 0 && (
+        <Alert
+          className="cursor-pointer"
+          type={AlertType.WARNING}
+          strongTitle="Next Step"
+          title="Please click here to add services to this code repository."
+          onClick={() => {
+            return Navigation.navigate(
+              RouteUtil.populateRouteParams(
+                RouteMap[PageMap.AI_COPILOT_CODE_REPOSITORY_VIEW_SERVICES]!,
+                { modelId: modelId },
+              ),
+            );
+          }}
+        />
+      )}
+
+      <CopilotLastRunAt
+        codeRepositoryId={modelId}
+        lastRunAt={codeRepository?.lastCopilotRunDateTime}
+      />
+
+      <CardModelDetail<CopilotCodeRepository>
         name="Git Repository > Repository Details"
         cardProps={{
           title: "Repository Details",
@@ -129,8 +199,16 @@ const StatusPageView: FunctionComponent<
           },
         ]}
         modelDetailProps={{
+          selectMoreFields: {
+            lastCopilotRunDateTime: true,
+          },
+          onItemLoaded: (item: CopilotCodeRepository) => {
+            if (!codeRepository) {
+              setCodeRepository(item);
+            }
+          },
           showDetailsInNumberOfColumns: 2,
-          modelType: CodeRepository,
+          modelType: CopilotCodeRepository,
           id: "model-detail-service-catalog",
           fields: [
             {
@@ -154,7 +232,7 @@ const StatusPageView: FunctionComponent<
               },
               title: "Labels",
               fieldType: FieldType.Element,
-              getElement: (item: CodeRepository): ReactElement => {
+              getElement: (item: CopilotCodeRepository): ReactElement => {
                 return <LabelsElement labels={item["labels"] || []} />;
               },
             },
@@ -203,4 +281,4 @@ const StatusPageView: FunctionComponent<
   );
 };
 
-export default StatusPageView;
+export default CopilotPageView;

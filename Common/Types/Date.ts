@@ -837,6 +837,61 @@ export default class OneUptimeDate {
     return minutes;
   }
 
+  public static getDifferenceInMonths(date: Date, date2: Date): number {
+    date = this.fromString(date);
+    date2 = this.fromString(date2);
+    const months: number = moment(date).diff(moment(date2), "months");
+
+    if (months < 0) {
+      return months * -1;
+    }
+
+    return months;
+  }
+
+  public static convertSecondsToDaysHoursMinutesAndSeconds(
+    seconds: number,
+  ): string {
+    // should output 2 days, 3 hours, 4 minutes and 5 seconds. If the days are 0, it should not show the days. If the hours are 0, it should not show the hours. If the minutes are 0, it should not show the minutes. If the seconds are 0, it should not show the seconds.
+
+    const days: number = Math.floor(seconds / (24 * 60 * 60));
+    const hours: number = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
+    const minutes: number = Math.floor((seconds % (60 * 60)) / 60);
+    const secs: number = seconds % 60;
+
+    let formattedString: string = "";
+
+    if (days > 0) {
+      formattedString += days + " days";
+    }
+
+    if (hours > 0) {
+      if (formattedString.length > 0) {
+        formattedString += ", ";
+      }
+
+      formattedString += hours + " hours";
+    }
+
+    if (minutes > 0) {
+      if (formattedString.length > 0) {
+        formattedString += ", ";
+      }
+
+      formattedString += minutes + " minutes";
+    }
+
+    if (secs > 0) {
+      if (formattedString.length > 0) {
+        formattedString += ", ";
+      }
+
+      formattedString += secs + " seconds";
+    }
+
+    return formattedString;
+  }
+
   public static convertMinutesToDaysHoursAndMinutes(minutes: number): string {
     // should output 2 days, 3 hours and 4 minutes. If the days are 0, it should not show the days. If the hours are 0, it should not show the hours. If the minutes are 0, it should not show the minutes.
 
@@ -878,6 +933,10 @@ export default class OneUptimeDate {
   ): string {
     const offset: number = this.getGmtOffsetByTimezone(timezone);
     return this.getGmtOffsetFriendlyString(offset) + " " + timezone;
+  }
+
+  public static isValidDateString(date: string): boolean {
+    return moment(date).isValid();
   }
 
   public static getGmtOffsetFriendlyString(offset: number): string {
@@ -1059,7 +1118,7 @@ export default class OneUptimeDate {
       return moment(date["value"]).toDate();
     }
 
-    throw new BadDataException("Invalid date: " + date.toString());
+    throw new BadDataException("Invalid date: " + date?.toString());
   }
 
   public static asDateForDatabaseQuery(date: string | Date): string {

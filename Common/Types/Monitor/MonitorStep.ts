@@ -10,10 +10,16 @@ import JSONFunctions from "../JSONFunctions";
 import ObjectID from "../ObjectID";
 import Port from "../Port";
 import MonitorCriteria from "./MonitorCriteria";
+import MonitorStepLogMonitor, {
+  MonitorStepLogMonitorUtil,
+} from "./MonitorStepLogMonitor";
 import MonitorType from "./MonitorType";
 import BrowserType from "./SyntheticMonitors//BrowserType";
 import ScreenSizeType from "./SyntheticMonitors/ScreenSizeType";
 import { FindOperator } from "typeorm";
+import MonitorStepTraceMonitor, {
+  MonitorStepTraceMonitorUtil,
+} from "./MonitorStepTraceMonitor";
 
 export interface MonitorStepType {
   id: string;
@@ -35,6 +41,12 @@ export interface MonitorStepType {
   // this is for synthetic monitors.
   screenSizeTypes?: Array<ScreenSizeType> | undefined;
   browserTypes?: Array<BrowserType> | undefined;
+
+  // Log monitor type.
+  logMonitor?: MonitorStepLogMonitor | undefined;
+
+  // trace monitor type.
+  traceMonitor?: MonitorStepTraceMonitor | undefined;
 }
 
 export default class MonitorStep extends DatabaseProperty {
@@ -54,6 +66,8 @@ export default class MonitorStep extends DatabaseProperty {
       customCode: undefined,
       screenSizeTypes: undefined,
       browserTypes: undefined,
+      logMonitor: undefined,
+      traceMonitor: undefined,
     };
   }
 
@@ -77,6 +91,8 @@ export default class MonitorStep extends DatabaseProperty {
       customCode: undefined,
       screenSizeTypes: undefined,
       browserTypes: undefined,
+      logMonitor: undefined,
+      traceMonitor: undefined,
     };
 
     return monitorStep;
@@ -133,6 +149,16 @@ export default class MonitorStep extends DatabaseProperty {
     return this;
   }
 
+  public setLogMonitor(logMonitor: MonitorStepLogMonitor): MonitorStep {
+    this.data!.logMonitor = logMonitor;
+    return this;
+  }
+
+  public setTraceMonitor(traceMonitor: MonitorStepTraceMonitor): MonitorStep {
+    this.data!.traceMonitor = traceMonitor;
+    return this;
+  }
+
   public setCustomCode(customCode: string): MonitorStep {
     this.data!.customCode = customCode;
     return this;
@@ -157,6 +183,7 @@ export default class MonitorStep extends DatabaseProperty {
         customCode: undefined,
         screenSizeTypes: undefined,
         browserTypes: undefined,
+        lgoMonitor: undefined,
       },
     };
   }
@@ -240,6 +267,17 @@ export default class MonitorStep extends DatabaseProperty {
           customCode: this.data.customCode || undefined,
           screenSizeTypes: this.data.screenSizeTypes || undefined,
           browserTypes: this.data.browserTypes || undefined,
+          logMonitor: this.data.logMonitor
+            ? MonitorStepLogMonitorUtil.toJSON(
+                this.data.logMonitor || MonitorStepLogMonitorUtil.getDefault(),
+              )
+            : undefined,
+          traceMonitor: this.data.traceMonitor
+            ? MonitorStepTraceMonitorUtil.toJSON(
+                this.data.traceMonitor ||
+                  MonitorStepTraceMonitorUtil.getDefault(),
+              )
+            : undefined,
         },
       });
     }
@@ -328,7 +366,21 @@ export default class MonitorStep extends DatabaseProperty {
       screenSizeTypes:
         (json["screenSizeTypes"] as Array<ScreenSizeType>) || undefined,
       browserTypes: (json["browserTypes"] as Array<BrowserType>) || undefined,
+      logMonitor: json["logMonitor"]
+        ? (json["logMonitor"] as JSONObject)
+        : undefined,
+      traceMonitor: json["traceMonitor"]
+        ? (json["traceMonitor"] as JSONObject)
+        : undefined,
     }) as any;
+
+    if (monitorStep.data && !monitorStep.data?.logMonitor) {
+      monitorStep.data.logMonitor = MonitorStepLogMonitorUtil.getDefault();
+    }
+
+    if (monitorStep.data && !monitorStep.data?.traceMonitor) {
+      monitorStep.data.traceMonitor = MonitorStepTraceMonitorUtil.getDefault();
+    }
 
     return monitorStep;
   }

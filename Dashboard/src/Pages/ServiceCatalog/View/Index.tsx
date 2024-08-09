@@ -1,15 +1,16 @@
 import LabelsElement from "../../../Components/Label/Labels";
 import PageComponentProps from "../../PageComponentProps";
 import ObjectID from "Common/Types/ObjectID";
-import ServiceLanguage from "Common/Types/ServiceCatalog/ServiceLanguage";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import CardModelDetail from "CommonUI/src/Components/ModelDetail/CardModelDetail";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import DropdownUtil from "CommonUI/src/Utils/Dropdown";
-import Navigation from "CommonUI/src/Utils/Navigation";
-import Label from "Model/Models/Label";
-import ServiceCatalog from "Model/Models/ServiceCatalog";
+import TechStack from "Common/Types/ServiceCatalog/TechStack";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import CardModelDetail from "Common/UI/Components/ModelDetail/CardModelDetail";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import DropdownUtil from "Common/UI/Utils/Dropdown";
+import Navigation from "Common/UI/Utils/Navigation";
+import Label from "Common/Models/DatabaseModels/Label";
+import ServiceCatalog from "Common/Models/DatabaseModels/ServiceCatalog";
 import React, { Fragment, FunctionComponent, ReactElement } from "react";
+import TechStackView from "../../../Components/TechStack/TechStackView";
 
 const StatusPageView: FunctionComponent<
   PageComponentProps
@@ -62,17 +63,16 @@ const StatusPageView: FunctionComponent<
           },
           {
             field: {
-              serviceLanguage: true,
+              techStack: true,
             },
             stepId: "service-info",
-            title: "Service Language / Framework",
+            title: "Tech Stack",
             description:
               "The language or framework used to build this service.",
-            fieldType: FormFieldSchemaType.Dropdown,
+            fieldType: FormFieldSchemaType.MultiSelectDropdown,
             required: true,
-            placeholder: "Service Language",
-            dropdownOptions:
-              DropdownUtil.getDropdownOptionsFromEnum(ServiceLanguage),
+            placeholder: "Tech Stack",
+            dropdownOptions: DropdownUtil.getDropdownOptionsFromEnum(TechStack),
           },
           {
             field: {
@@ -111,9 +111,17 @@ const StatusPageView: FunctionComponent<
             },
             {
               field: {
-                serviceLanguage: true,
+                techStack: true,
               },
-              title: "Service Language / Framework",
+              title: "Tech Stack",
+              fieldType: FieldType.Element,
+              getElement: (item: ServiceCatalog): ReactElement => {
+                return (
+                  <Fragment>
+                    <TechStackView techStack={item["techStack"] || []} />
+                  </Fragment>
+                );
+              },
             },
             {
               field: {

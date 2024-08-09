@@ -8,23 +8,23 @@ import ObjectID from "Common/Types/ObjectID";
 import ProbeApiIngestResponse from "Common/Types/Probe/ProbeApiIngestResponse";
 import ProbeMonitorResponse from "Common/Types/Probe/ProbeMonitorResponse";
 import ProbeStatusReport from "Common/Types/Probe/ProbeStatusReport";
-import { DisableAutomaticIncidentCreation } from "CommonServer/EnvironmentConfig";
-import GlobalConfigService from "CommonServer/Services/GlobalConfigService";
-import MailService from "CommonServer/Services/MailService";
-import ProbeService from "CommonServer/Services/ProbeService";
-import ProjectService from "CommonServer/Services/ProjectService";
+import { DisableAutomaticIncidentCreation } from "Common/Server/EnvironmentConfig";
+import GlobalConfigService from "Common/Server/Services/GlobalConfigService";
+import MailService from "Common/Server/Services/MailService";
+import ProbeService from "Common/Server/Services/ProbeService";
+import ProjectService from "Common/Server/Services/ProjectService";
 import Express, {
   ExpressRequest,
   ExpressResponse,
   ExpressRouter,
   NextFunction,
-} from "CommonServer/Utils/Express";
-import logger from "CommonServer/Utils/Logger";
-import ProbeMonitorResponseService from "CommonServer/Utils/Probe/ProbeMonitorResponse";
-import Response from "CommonServer/Utils/Response";
-import GlobalConfig from "Model/Models/GlobalConfig";
-import Probe from "Model/Models/Probe";
-import User from "Model/Models/User";
+} from "Common/Server/Utils/Express";
+import logger from "Common/Server/Utils/Logger";
+import MonitorResourceUtil from "Common/Server/Utils/Monitor/MonitorResource";
+import Response from "Common/Server/Utils/Response";
+import GlobalConfig from "Common/Models/DatabaseModels/GlobalConfig";
+import Probe from "Common/Models/DatabaseModels/Probe";
+import User from "Common/Models/DatabaseModels/User";
 
 const router: ExpressRouter = Express.getRouter();
 
@@ -246,7 +246,7 @@ router.post(
 
       // process probe response here.
       const probeApiIngestResponse: ProbeApiIngestResponse =
-        await ProbeMonitorResponseService.processProbeResponse(probeResponse);
+        await MonitorResourceUtil.monitorResource(probeResponse);
 
       return Response.sendJsonObjectResponse(req, res, {
         probeApiIngestResponse: probeApiIngestResponse,

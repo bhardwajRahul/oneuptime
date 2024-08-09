@@ -4,10 +4,10 @@ import { CheckOn } from "Common/Types/Monitor/CriteriaFilter";
 import IncomingMonitorRequest from "Common/Types/Monitor/IncomingMonitor/IncomingMonitorRequest";
 import MonitorType from "Common/Types/Monitor/MonitorType";
 import { EVERY_MINUTE } from "Common/Utils/CronTime";
-import MonitorService from "CommonServer/Services/MonitorService";
-import logger from "CommonServer/Utils/Logger";
-import ProbeMonitorResponseService from "CommonServer/Utils/Probe/ProbeMonitorResponse";
-import Monitor from "Model/Models/Monitor";
+import MonitorService from "Common/Server/Services/MonitorService";
+import logger from "Common/Server/Utils/Logger";
+import MonitorResourceUtil from "Common/Server/Utils/Monitor/MonitorResource";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
 
 RunCron(
   "IncomingRequestMonitor:CheckHeartbeat",
@@ -67,7 +67,7 @@ RunCron(
           onlyCheckForIncomingRequestReceivedAt: true,
         };
 
-        await ProbeMonitorResponseService.processProbeResponse(incomingRequest);
+        await MonitorResourceUtil.monitorResource(incomingRequest);
       } catch (error) {
         logger.error(
           `Error while processing incoming request monitor: ${monitor.id?.toString()}`,

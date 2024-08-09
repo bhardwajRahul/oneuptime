@@ -6,17 +6,17 @@ import { JSONObject } from "Common/Types/JSON";
 import IncomingMonitorRequest from "Common/Types/Monitor/IncomingMonitor/IncomingMonitorRequest";
 import MonitorType from "Common/Types/Monitor/MonitorType";
 import ObjectID from "Common/Types/ObjectID";
-import MonitorService from "CommonServer/Services/MonitorService";
+import MonitorService from "Common/Server/Services/MonitorService";
 import Express, {
   ExpressRequest,
   ExpressResponse,
   ExpressRouter,
   NextFunction,
   RequestHandler,
-} from "CommonServer/Utils/Express";
-import ProbeMonitorResponseService from "CommonServer/Utils/Probe/ProbeMonitorResponse";
-import Response from "CommonServer/Utils/Response";
-import Monitor from "Model/Models/Monitor";
+} from "Common/Server/Utils/Express";
+import MonitorResourceUtil from "Common/Server/Utils/Monitor/MonitorResource";
+import Response from "Common/Server/Utils/Response";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
 
 const router: ExpressRouter = Express.getRouter();
 
@@ -77,7 +77,7 @@ const processIncomingRequest: RequestHandler = async (
     };
 
     // process probe response here.
-    await ProbeMonitorResponseService.processProbeResponse(incomingRequest);
+    await MonitorResourceUtil.monitorResource(incomingRequest);
 
     return Response.sendEmptySuccessResponse(req, res);
   } catch (err) {

@@ -11,11 +11,20 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 # ENV VARS
 ONEUPTIME_URL = os.getenv("ONEUPTIME_URL")
+HF_MODEL_NAME = os.getenv("HF_MODEL_NAME")
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+if not HF_MODEL_NAME:
+    HF_MODEL_NAME = "meta-llama/Meta-Llama-3-8B-Instruct"
+    print(f"HF_MODEL_NAME not set. Using default model: {HF_MODEL_NAME}")
 
 if not ONEUPTIME_URL:
     ONEUPTIME_URL = "https://oneuptime.com"
 
-print(f"ONEUPTIME_URL: {ONEUPTIME_URL}")
+if not HF_TOKEN:
+    # Print error and exit
+    print("HF_TOKEN env var is required. This is the Hugging Face API token. You can get it from https://huggingface.co/account/overview. Exiting..")
+    exit()
 
 # TODO: Store this in redis down the line. 
 items_pending = {}
@@ -30,8 +39,10 @@ async def validateSecretKey(secretKey):
             return False
 
         async with aiohttp.ClientSession() as session:
-            url = f"{ONEUPTIME_URL}/api/code-repository/is-valid/{secretKey}"
+            print(f"Validating secret key")
+            url = f"{ONEUPTIME_URL}/api/copilot-code-repository/is-valid/{secretKey}"
             async with session.get(url) as response:
+                print(response)
                 if response.status == 200:
                     return True
                 else:
@@ -42,16 +53,27 @@ async def validateSecretKey(secretKey):
         return False
 
 async def job(queue):
-    print("Processing queue...")
+    print("Downlaoding model from Hugging Face: "+HF_MODEL_NAME)
 
-    model_path = "/app/Models/Meta-Llama-3-8B-Instruct"
+    # check if the model is meta-llama/Meta-Llama-3-8B-Instruct
+    if HF_MODEL_NAME == "meta-llama/Meta-Llama-3-8B-Instruct":
+        print("If you want to use a different model, please set the HF_MODEL_NAME environment variable.")
+
+    print("This may take a while (minutes or sometimes hours) depending on the model size.")
+
+    # model_path = "/app/Models/Meta-Llama-3-8B-Instruct"
+    model_path = HF_MODEL_NAME
 
     pipe = transformers.pipeline(
         "text-generation", 
         model=model_path,
         # use gpu if available
         device="cuda" if torch.cuda.is_available() else "cpu",
+        # max_new_tokens=8096
         )
+    
+
+    print("Model downloaded.")
 
     while True:
 
@@ -90,17 +112,21 @@ async def lifespan(app:FastAPI):
 # Declare a Pydantic model for the request body
 class Prompt(BaseModel):
    messages: list
-   secretkey: str
+   # secretkey: str
 
 # Declare a Pydantic model for the request body
 class PromptResult(BaseModel):
    id: str
-   secretkey: str
+   # secretkey: str
 
 app = FastAPI(lifespan=lifespan)
 
 @app.get("/")
 async def root():
+     return {"status": "ok"}
+
+@app.get("/status")
+async def status():
      return {"status": "ok"}
 
 @app.post("/prompt/")
@@ -112,11 +138,11 @@ async def create_item(prompt: Prompt):
             return {"error": "Prompt is required"}
         
         # Validate the secret key
-        is_valid = await validateSecretKey(prompt_status.secretkey)
+        # is_valid = await validateSecretKey(prompt.secretkey)
 
-        if not is_valid:
-            print("Invalid secret key")
-            return {"error": "Invalid secret key"}
+        # if not is_valid:
+        #     print("Invalid secret key")
+        #     return {"error": "Invalid secret key"}
         
         # messages are in str format. We need to convert them fron json [] to list
         messages = prompt.messages
@@ -157,11 +183,11 @@ async def prompt_status(prompt_status: PromptResult):
         print(prompt_status)
 
         # Validate the secret key
-        is_valid = await validateSecretKey(prompt_status.secretkey)
+        # is_valid = await validateSecretKey(prompt_status.secretkey)
 
-        if not is_valid:
-            print("Invalid secret key")
-            return {"error": "Invalid secret key"}
+        # if not is_valid:
+        #     print("Invalid secret key")
+        #     return {"error": "Invalid secret key"}
         
         # If not prompt status then return bad request error
         if not prompt_status:

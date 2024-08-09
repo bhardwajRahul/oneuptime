@@ -15,9 +15,9 @@ import { JSONObject } from "Common/Types/JSON";
 import ProbeStatusReport from "Common/Types/Probe/ProbeStatusReport";
 import Sleep from "Common/Types/Sleep";
 import API from "Common/Utils/API";
-import { ClusterKey, HasClusterKey } from "CommonServer/EnvironmentConfig";
-import LocalCache from "CommonServer/Infrastructure/LocalCache";
-import logger from "CommonServer/Utils/Logger";
+import { ClusterKey, HasClusterKey } from "Common/Server/EnvironmentConfig";
+import LocalCache from "Common/Server/Infrastructure/LocalCache";
+import logger from "Common/Server/Utils/Logger";
 
 export default class Register {
   public static async reportIfOffline(): Promise<void> {
@@ -31,7 +31,7 @@ export default class Register {
     if (!pingMonitoringCheck && websiteMonitoringCheck) {
       // probe is online but ping monitoring is blocked by the cloud provider. Fallback to port monitoring.
       logger.warn(
-        "Ping monitoring is on this machine. Fallback to port monitoring",
+        "Ping monitoring is disabled on this machine. Ping/ICMP checks are usually disabled by cloud providers (Azure, AWS, GCP, etc.). If you need ICMP checks, please use a different provider or use port checks.",
       );
       LocalCache.setString("PROBE", "PING_MONITORING", "PORT");
     }

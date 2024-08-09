@@ -1,4 +1,4 @@
-import Banner from "CommonUI/src/Components/Banner/Banner";
+import Banner from "Common/UI/Components/Banner/Banner";
 import LabelsElement from "../../Components/Label/Labels";
 import DashboardNavigation from "../../Utils/Navigation";
 import PageMap from "../../Utils/PageMap";
@@ -6,14 +6,14 @@ import RouteMap, { RouteUtil } from "../../Utils/RouteMap";
 import PageComponentProps from "../PageComponentProps";
 import Route from "Common/Types/API/Route";
 import CodeRepositoryType from "Common/Types/CodeRepository/CodeRepositoryType";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import ModelTable from "CommonUI/src/Components/ModelTable/ModelTable";
-import Page from "CommonUI/src/Components/Page/Page";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import DropdownUtil from "CommonUI/src/Utils/Dropdown";
-import Navigation from "CommonUI/src/Utils/Navigation";
-import CodeRepository from "Model/Models/CodeRepository";
-import Label from "Model/Models/Label";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import ModelTable from "Common/UI/Components/ModelTable/ModelTable";
+import Page from "Common/UI/Components/Page/Page";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import DropdownUtil from "Common/UI/Utils/Dropdown";
+import Navigation from "Common/UI/Utils/Navigation";
+import CodeRepository from "Common/Models/DatabaseModels/CopilotCodeRepository";
+import Label from "Common/Models/DatabaseModels/Label";
 import React, { FunctionComponent, ReactElement } from "react";
 import URL from "Common/Types/API/URL";
 
@@ -48,6 +48,7 @@ const CodeRepositoryPage: FunctionComponent<
         isDeleteable={false}
         isEditable={false}
         isCreateable={true}
+        createVerb="Add"
         name="Git Repositories"
         isViewable={true}
         cardProps={{
@@ -98,21 +99,6 @@ const CodeRepositoryPage: FunctionComponent<
           },
           {
             field: {
-              mainBranchName: true,
-            },
-            title: "Main Branch Name",
-            fieldType: FormFieldSchemaType.Text,
-            required: true,
-            placeholder: "master",
-            validation: {
-              minLength: 2,
-              noSpaces: true,
-              noSpecialCharacters: true,
-            },
-            stepId: "details",
-          },
-          {
-            field: {
               repositoryHostedAt: true,
             },
             title: "Repository Hosted At",
@@ -140,6 +126,21 @@ const CodeRepositoryPage: FunctionComponent<
             fieldType: FormFieldSchemaType.Text,
             required: true,
             placeholder: "repo-name",
+            stepId: "details",
+          },
+          {
+            field: {
+              mainBranchName: true,
+            },
+            title: "Main Branch Name",
+            fieldType: FormFieldSchemaType.Text,
+            required: true,
+            placeholder: "master",
+            validation: {
+              minLength: 2,
+              noSpaces: true,
+              noSpecialCharacters: true,
+            },
             stepId: "details",
           },
         ]}

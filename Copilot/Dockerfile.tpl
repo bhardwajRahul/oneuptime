@@ -3,11 +3,8 @@
 #
 
 # Pull base image nodejs image.
-FROM node:21.7.3-alpine3.18
+FROM node:22.3.0
 RUN mkdir /tmp/npm &&  chmod 2777 /tmp/npm && chown 1000:1000 /tmp/npm && npm config set cache /tmp/npm --global
-
-# Set the stack trace limit to 0 to show full stack traces
-ENV NODE_OPTIONS='--stack-trace-limit=0'
 
 ARG GIT_SHA
 ARG APP_VERSION
@@ -21,17 +18,16 @@ RUN if [ -z "$APP_VERSION" ]; then export APP_VERSION=1.0.0; fi
 
 
 # Install bash. 
-RUN apk add bash && apk add curl
-
+RUN apt-get install bash -y && apt-get install curl -y
 
 # Install python
-RUN apk update && apk add --no-cache --virtual .gyp python3 make g++
+RUN apt-get update && apt-get install -y .gyp python3 make g++
 
 #Use bash shell by default
 SHELL ["/bin/bash", "-c"]
 
 
-RUN mkdir /usr/src
+RUN mkdir -p /usr/src
 
 WORKDIR /usr/src/Common
 COPY ./Common/package*.json /usr/src/Common/
@@ -41,29 +37,13 @@ RUN npm install
 COPY ./Common /usr/src/Common
 
 
-WORKDIR /usr/src/Model
-COPY ./Model/package*.json /usr/src/Model/
-# Set version in ./Model/package.json to the APP_VERSION
-RUN sed -i "s/\"version\": \".*\"/\"version\": \"$APP_VERSION\"/g" /usr/src/Model/package.json
-RUN npm install
-COPY ./Model /usr/src/Model
 
 
 
-WORKDIR /usr/src/CommonServer
-COPY ./CommonServer/package*.json /usr/src/CommonServer/
-# Set version in ./CommonServer/package.json to the APP_VERSION
-RUN sed -i "s/\"version\": \".*\"/\"version\": \"$APP_VERSION\"/g" /usr/src/CommonServer/package.json
-RUN npm install
-COPY ./CommonServer /usr/src/CommonServer
 
 
-WORKDIR /usr/src/CommonUI
-COPY ./CommonUI/package*.json /usr/src/CommonUI/
-# Set version in ./CommonServer/package.json to the APP_VERSION
-RUN sed -i "s/\"version\": \".*\"/\"version\": \"$APP_VERSION\"/g" /usr/src/CommonUI/package.json
-RUN npm install
-COPY ./CommonUI /usr/src/CommonUI
+
+
 
 ENV PRODUCTION=true
 
@@ -75,7 +55,10 @@ RUN npm install
 
 
 # Create /repository/ directory where the app will store the repository
-RUN mkdir /repository
+RUN mkdir -p /repository
+
+# Set the stack trace limit to 0 to show full stack traces
+ENV NODE_OPTIONS='--stack-trace-limit=30'
 
 {{ if eq .Env.ENVIRONMENT "development" }}
 #Run the app
@@ -88,4 +71,3 @@ RUN npm run compile
 #Run the app
 CMD [ "npm", "start" ]
 {{ end }}
-

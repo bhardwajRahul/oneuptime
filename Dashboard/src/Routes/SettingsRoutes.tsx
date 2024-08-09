@@ -27,6 +27,19 @@ const SettingsApiKeyView: LazyExoticComponent<
 > = lazy(() => {
   return import("../Pages/Settings/APIKeyView");
 });
+
+const SettingsIngestionKeys: LazyExoticComponent<
+  FunctionComponent<ComponentProps>
+> = lazy(() => {
+  return import("../Pages/Settings/TelemetryIngestionKeys");
+});
+
+const SettingsIngestionKeyView: LazyExoticComponent<
+  FunctionComponent<ComponentProps>
+> = lazy(() => {
+  return import("../Pages/Settings/TelemetryIngestionKeyView");
+});
+
 const SettingLabels: LazyExoticComponent<FunctionComponent<ComponentProps>> =
   lazy(() => {
     return import("../Pages/Settings/Labels");
@@ -49,6 +62,12 @@ const SettingsTeamView: LazyExoticComponent<FunctionComponent<ComponentProps>> =
   lazy(() => {
     return import("../Pages/Settings/TeamView");
   });
+
+const SettingsProbeView: LazyExoticComponent<
+  FunctionComponent<ComponentProps>
+> = lazy(() => {
+  return import("../Pages/Settings/ProbeView");
+});
 const SettingsMonitors: LazyExoticComponent<FunctionComponent<ComponentProps>> =
   lazy(() => {
     return import("../Pages/Settings/MonitorStatus");
@@ -479,6 +498,41 @@ const SettingsRoutes: FunctionComponent<ComponentProps> = (
 
         <PageRoute
           path={RouteUtil.getLastPathForKey(
+            PageMap.SETTINGS_TELEMETRY_INGESTION_KEYS,
+          )}
+          element={
+            <Suspense fallback={Loader}>
+              <SettingsIngestionKeys
+                {...props}
+                pageRoute={
+                  RouteMap[PageMap.SETTINGS_TELEMETRY_INGESTION_KEYS] as Route
+                }
+              />
+            </Suspense>
+          }
+        />
+
+        <PageRoute
+          path={RouteUtil.getLastPathForKey(
+            PageMap.SETTINGS_TELEMETRY_INGESTION_KEY_VIEW,
+            2,
+          )}
+          element={
+            <Suspense fallback={Loader}>
+              <SettingsIngestionKeyView
+                {...props}
+                pageRoute={
+                  RouteMap[
+                    PageMap.SETTINGS_TELEMETRY_INGESTION_KEY_VIEW
+                  ] as Route
+                }
+              />
+            </Suspense>
+          }
+        />
+
+        <PageRoute
+          path={RouteUtil.getLastPathForKey(
             PageMap.SETTINGS_MONITOR_CUSTOM_FIELDS,
           )}
           element={
@@ -640,6 +694,18 @@ const SettingsRoutes: FunctionComponent<ComponentProps> = (
               <SettingsTeamView
                 {...props}
                 pageRoute={RouteMap[PageMap.SETTINGS_TEAM_VIEW] as Route}
+              />
+            </Suspense>
+          }
+        />
+
+        <PageRoute
+          path={RouteUtil.getLastPathForKey(PageMap.SETTINGS_PROBE_VIEW, 2)}
+          element={
+            <Suspense fallback={Loader}>
+              <SettingsProbeView
+                {...props}
+                pageRoute={RouteMap[PageMap.SETTINGS_PROBE_VIEW] as Route}
               />
             </Suspense>
           }

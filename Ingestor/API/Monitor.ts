@@ -1,7 +1,7 @@
 import ProbeAuthorization from "../Middleware/ProbeAuthorization";
 import { ProbeExpressRequest } from "../Types/Request";
 import MonitorUtil from "../Utils/Monitor";
-import BaseModel from "Common/Models/BaseModel";
+import BaseModel from "Common/Models/DatabaseModels/DatabaseBaseModel/DatabaseBaseModel";
 import SortOrder from "Common/Types/BaseDatabase/SortOrder";
 import SubscriptionStatus from "Common/Types/Billing/SubscriptionStatus";
 import LIMIT_MAX from "Common/Types/Database/LimitMax";
@@ -10,23 +10,25 @@ import BadDataException from "Common/Types/Exception/BadDataException";
 import { JSONObject } from "Common/Types/JSON";
 import ObjectID from "Common/Types/ObjectID";
 import PositiveNumber from "Common/Types/PositiveNumber";
-import Semaphore from "CommonServer/Infrastructure/Semaphore";
-import ClusterKeyAuthorization from "CommonServer/Middleware/ClusterKeyAuthorization";
-import MonitorProbeService from "CommonServer/Services/MonitorProbeService";
-import Query from "CommonServer/Types/Database/Query";
-import QueryHelper from "CommonServer/Types/Database/QueryHelper";
-import CronTab from "CommonServer/Utils/CronTab";
+import Semaphore, {
+  SemaphoreMutex,
+} from "Common/Server/Infrastructure/Semaphore";
+import ClusterKeyAuthorization from "Common/Server/Middleware/ClusterKeyAuthorization";
+import MonitorProbeService from "Common/Server/Services/MonitorProbeService";
+import Query from "Common/Server/Types/Database/Query";
+import QueryHelper from "Common/Server/Types/Database/QueryHelper";
+import CronTab from "Common/Server/Utils/CronTab";
 import Express, {
   ExpressRequest,
   ExpressResponse,
   ExpressRouter,
   NextFunction,
   OneUptimeRequest,
-} from "CommonServer/Utils/Express";
-import logger from "CommonServer/Utils/Logger";
-import Response from "CommonServer/Utils/Response";
-import Monitor from "Model/Models/Monitor";
-import MonitorProbe from "Model/Models/MonitorProbe";
+} from "Common/Server/Utils/Express";
+import logger from "Common/Server/Utils/Logger";
+import Response from "Common/Server/Utils/Response";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
+import MonitorProbe from "Common/Models/DatabaseModels/MonitorProbe";
 
 const router: ExpressRouter = Express.getRouter();
 
@@ -196,16 +198,24 @@ router.post(
     res: ExpressResponse,
     next: NextFunction,
   ): Promise<void> => {
-    let mutexId: ObjectID | null = null;
+    let mutex: SemaphoreMutex | null = null;
+
+    logger.debug("Monitor list API called");
 
     try {
       const data: JSONObject = req.body;
       const limit: number = (data["limit"] as number) || 100;
 
+      logger.debug("Monitor list API called with limit: " + limit);
+      logger.debug("Data:");
+      logger.debug(data);
+
       if (
         !(req as ProbeExpressRequest).probe ||
         !(req as ProbeExpressRequest).probe?.id
       ) {
+        logger.error("Probe not found");
+
         return Response.sendErrorResponse(
           req,
           res,
@@ -216,6 +226,8 @@ router.post(
       const probeId: ObjectID = (req as ProbeExpressRequest).probe!.id!;
 
       if (!probeId) {
+        logger.error("Probe not found");
+
         return Response.sendErrorResponse(
           req,
           res,
@@ -223,11 +235,18 @@ router.post(
         );
       }
 
-      mutexId = await Semaphore.lock({
-        key: probeId.toString(),
-      });
+      try {
+        mutex = await Semaphore.lock({
+          key: probeId.toString(),
+        });
+      } catch (err) {
+        logger.error(err);
+      }
 
       //get list of monitors to be monitored
+
+      logger.debug("Fetching monitor list");
+
       const monitorProbes: Array<MonitorProbe> =
         await MonitorProbeService.findBy({
           query: getMonitorFetchQuery((req as OneUptimeRequest).probe!.id!),
@@ -251,7 +270,12 @@ router.post(
           },
         });
 
+      logger.debug("Fetched monitor list");
+      logger.debug(monitorProbes);
+
       // update the lastMonitoredAt field of the monitors
+
+      const updatePromises: Array<Promise<void>> = [];
 
       for (const monitorProbe of monitorProbes) {
         if (!monitorProbe.monitor) {
@@ -271,19 +295,29 @@ router.post(
           logger.error(err);
         }
 
-        await MonitorProbeService.updateOneById({
-          id: monitorProbe.id!,
-          data: {
-            lastPingAt: OneUptimeDate.getCurrentDate(),
-            nextPingAt: nextPing,
-          },
-          props: {
-            isRoot: true,
-          },
-        });
+        updatePromises.push(
+          MonitorProbeService.updateOneById({
+            id: monitorProbe.id!,
+            data: {
+              lastPingAt: OneUptimeDate.getCurrentDate(),
+              nextPingAt: nextPing,
+            },
+            props: {
+              isRoot: true,
+            },
+          }),
+        );
       }
 
-      await Semaphore.release(mutexId);
+      await Promise.all(updatePromises);
+
+      if (mutex) {
+        try {
+          await Semaphore.release(mutex);
+        } catch (err) {
+          logger.error(err);
+        }
+      }
 
       const monitors: Array<Monitor> = monitorProbes
         .map((monitorProbe: MonitorProbe) => {
@@ -293,18 +327,30 @@ router.post(
           return Boolean(monitor._id);
         });
 
+      logger.debug("Populating secrets");
+      logger.debug(monitors);
+
       // check if the monitor needs secrets to be filled.
 
-      const monitorsWithSecretPopulated: Array<Monitor> = [];
+      let monitorsWithSecretPopulated: Array<Monitor> = [];
+      const monitorWithSecretsPopulatePromises: Array<Promise<Monitor>> = [];
 
       for (const monitor of monitors) {
-        const monitorWithSecrets: Monitor =
-          await MonitorUtil.populateSecrets(monitor);
-
-        monitorsWithSecretPopulated.push(monitorWithSecrets);
+        monitorWithSecretsPopulatePromises.push(
+          MonitorUtil.populateSecrets(monitor),
+        );
       }
 
+      monitorsWithSecretPopulated = await Promise.all(
+        monitorWithSecretsPopulatePromises,
+      );
+
+      logger.debug("Populated secrets");
+      logger.debug(monitorsWithSecretPopulated);
+
       // return the list of monitors to be monitored
+
+      logger.debug("Sending response");
 
       return Response.sendEntityArrayResponse(
         req,
@@ -315,8 +361,8 @@ router.post(
       );
     } catch (err) {
       try {
-        if (mutexId) {
-          await Semaphore.release(mutexId);
+        if (mutex) {
+          await Semaphore.release(mutex);
         }
       } catch (err) {
         logger.error(err);

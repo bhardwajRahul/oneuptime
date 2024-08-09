@@ -1,5 +1,5 @@
-import AnalyticsBaseModel from "Common/AnalyticsModels/BaseModel";
-import BaseModel from "Common/Models/BaseModel";
+import AnalyticsBaseModel from "Common/Models/AnalyticsModels/AnalyticsBaseModel/AnalyticsBaseModel";
+import BaseModel from "Common/Models/DatabaseModels/DatabaseBaseModel/DatabaseBaseModel";
 import HTTPErrorResponse from "Common/Types/API/HTTPErrorResponse";
 import HTTPResponse from "Common/Types/API/HTTPResponse";
 import URL from "Common/Types/API/URL";
@@ -9,8 +9,8 @@ import { JSONArray, JSONObject, JSONObjectOrArray } from "Common/Types/JSON";
 import JSONFunctions from "Common/Types/JSONFunctions";
 import Text from "Common/Types/Text";
 import API from "Common/Utils/API";
-import LocalCache from "CommonServer/Infrastructure/LocalCache";
-import Markdown, { MarkdownContentType } from "CommonServer/Types/Markdown";
+import LocalCache from "Common/Server/Infrastructure/LocalCache";
+import Markdown, { MarkdownContentType } from "Common/Server/Types/Markdown";
 
 export interface BlogPostAuthor {
   username: string;

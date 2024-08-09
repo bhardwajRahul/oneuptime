@@ -1,10 +1,10 @@
 import DataMigrationBase from "./DataMigrationBase";
 import LIMIT_MAX from "Common/Types/Database/LimitMax";
-import ProjectService from "CommonServer/Services/ProjectService";
-import UserService from "CommonServer/Services/UserService";
-import QueryHelper from "CommonServer/Types/Database/QueryHelper";
-import Project from "Model/Models/Project";
-import User from "Model/Models/User";
+import ProjectService from "Common/Server/Services/ProjectService";
+import UserService from "Common/Server/Services/UserService";
+import QueryHelper from "Common/Server/Types/Database/QueryHelper";
+import Project from "Common/Models/DatabaseModels/Project";
+import User from "Common/Models/DatabaseModels/User";
 
 export default class AddOwnerInfoToProjects extends DataMigrationBase {
   public constructor() {

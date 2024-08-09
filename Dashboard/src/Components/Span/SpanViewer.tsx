@@ -6,26 +6,29 @@ import CodeType from "Common/Types/Code/CodeType";
 import { LIMIT_PER_PROJECT } from "Common/Types/Database/LimitMax";
 import { PromiseVoidFunction } from "Common/Types/FunctionTypes";
 import JSONFunctions from "Common/Types/JSONFunctions";
-import Accordion from "CommonUI/src/Components/Accordion/Accordion";
-import AccordionGroup from "CommonUI/src/Components/Accordion/AccordionGroup";
-import CodeEditor from "CommonUI/src/Components/CodeEditor/CodeEditor";
-import Detail from "CommonUI/src/Components/Detail/Detail";
-import ErrorMessage from "CommonUI/src/Components/ErrorMessage/ErrorMessage";
-import PageLoader from "CommonUI/src/Components/Loader/PageLoader";
-import LogsViewer from "CommonUI/src/Components/LogsViewer/LogsViewer";
-import { TabType } from "CommonUI/src/Components/Tabs/Tab";
-import Tabs from "CommonUI/src/Components/Tabs/Tabs";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import { GetReactElementFunction } from "CommonUI/src/Types/FunctionTypes";
-import API from "CommonUI/src/Utils/API/API";
+import Accordion from "Common/UI/Components/Accordion/Accordion";
+import AccordionGroup from "Common/UI/Components/Accordion/AccordionGroup";
+import CodeEditor from "Common/UI/Components/CodeEditor/CodeEditor";
+import Detail from "Common/UI/Components/Detail/Detail";
+import ErrorMessage from "Common/UI/Components/ErrorMessage/ErrorMessage";
+import PageLoader from "Common/UI/Components/Loader/PageLoader";
+import LogsViewer from "Common/UI/Components/LogsViewer/LogsViewer";
+import { TabType } from "Common/UI/Components/Tabs/Tab";
+import Tabs from "Common/UI/Components/Tabs/Tabs";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import { GetReactElementFunction } from "Common/UI/Types/FunctionTypes";
+import API from "Common/UI/Utils/API/API";
 import AnalyticsModelAPI, {
   ListResult,
-} from "CommonUI/src/Utils/AnalyticsModelAPI/AnalyticsModelAPI";
-import Select from "CommonUI/src/Utils/BaseDatabase/Select";
-import ProjectUtil from "CommonUI/src/Utils/Project";
-import Log from "Model/AnalyticsModels/Log";
-import Span, { SpanEvent, SpanEventType } from "Model/AnalyticsModels/Span";
-import TelemetryService from "Model/Models/TelemetryService";
+} from "Common/UI/Utils/AnalyticsModelAPI/AnalyticsModelAPI";
+import Select from "Common/UI/Utils/BaseDatabase/Select";
+import ProjectUtil from "Common/UI/Utils/Project";
+import Log from "Common/Models/AnalyticsModels/Log";
+import Span, {
+  SpanEvent,
+  SpanEventType,
+} from "Common/Models/AnalyticsModels/Span";
+import TelemetryService from "Common/Models/DatabaseModels/TelemetryService";
 import React, { FunctionComponent, ReactElement, useEffect } from "react";
 
 export interface ComponentProps {
@@ -141,6 +144,7 @@ const SpanViewer: FunctionComponent<ComponentProps> = (
       <LogsViewer
         isLoading={isLoading}
         onFilterChanged={() => {}}
+        filterData={{}}
         logs={logs}
         showFilters={false}
         noLogsMessage={"No logs found for this span."}
@@ -373,7 +377,8 @@ const SpanViewer: FunctionComponent<ComponentProps> = (
               return (
                 <div>
                   <SpanStatusElement
-                    span={span}
+                    traceId={span.traceId?.toString()}
+                    spanStatusCode={span.statusCode!}
                     title={
                       "Status: " +
                       SpanUtil.getSpanStatusCodeFriendlyName(span.statusCode!)

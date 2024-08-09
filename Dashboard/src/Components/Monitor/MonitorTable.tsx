@@ -3,7 +3,7 @@ import MonitoringInterval from "../../Utils/MonitorIntervalDropdownOptions";
 import MonitorTypeUtil from "../../Utils/MonitorType";
 import DashboardNavigation from "../../Utils/Navigation";
 import MonitorSteps from "../Form/Monitor/MonitorSteps";
-import { Black, Gray500 } from "Common/Types/BrandColors";
+import { Black, Gray500, Red500 } from "Common/Types/BrandColors";
 import BadDataException from "Common/Types/Exception/BadDataException";
 import IconProp from "Common/Types/Icon/IconProp";
 import MonitorStepsType from "Common/Types/Monitor/MonitorSteps";
@@ -11,36 +11,41 @@ import MonitorType from "Common/Types/Monitor/MonitorType";
 import {
   BulkActionFailed,
   BulkActionOnClickProps,
-} from "CommonUI/src/Components/BulkUpdate/BulkUpdateForm";
-import { ButtonStyleType } from "CommonUI/src/Components/Button/Button";
-import { DropdownOption } from "CommonUI/src/Components/Dropdown/Dropdown";
+} from "Common/UI/Components/BulkUpdate/BulkUpdateForm";
+import { ButtonStyleType } from "Common/UI/Components/Button/Button";
+import { DropdownOption } from "Common/UI/Components/Dropdown/Dropdown";
 import {
   CustomElementProps,
   FormFieldStyleType,
-} from "CommonUI/src/Components/Forms/Types/Field";
-import FormFieldSchemaType from "CommonUI/src/Components/Forms/Types/FormFieldSchemaType";
-import FormValues from "CommonUI/src/Components/Forms/Types/FormValues";
-import { ModalWidth } from "CommonUI/src/Components/Modal/Modal";
-import { ModalTableBulkDefaultActions } from "CommonUI/src/Components/ModelTable/BaseModelTable";
-import ModelTable from "CommonUI/src/Components/ModelTable/ModelTable";
-import Statusbubble from "CommonUI/src/Components/StatusBubble/StatusBubble";
-import FieldType from "CommonUI/src/Components/Types/FieldType";
-import API from "CommonUI/src/Utils/API/API";
-import Query from "CommonUI/src/Utils/BaseDatabase/Query";
-import ModelAPI from "CommonUI/src/Utils/ModelAPI/ModelAPI";
-import Label from "Model/Models/Label";
-import Monitor from "Model/Models/Monitor";
-import MonitorStatus from "Model/Models/MonitorStatus";
+} from "Common/UI/Components/Forms/Types/Field";
+import FormFieldSchemaType from "Common/UI/Components/Forms/Types/FormFieldSchemaType";
+import FormValues from "Common/UI/Components/Forms/Types/FormValues";
+import { ModalWidth } from "Common/UI/Components/Modal/Modal";
+import { ModalTableBulkDefaultActions } from "Common/UI/Components/ModelTable/BaseModelTable";
+import ModelTable from "Common/UI/Components/ModelTable/ModelTable";
+import Statusbubble from "Common/UI/Components/StatusBubble/StatusBubble";
+import FieldType from "Common/UI/Components/Types/FieldType";
+import API from "Common/UI/Utils/API/API";
+import Query from "Common/UI/Utils/BaseDatabase/Query";
+import ModelAPI from "Common/UI/Utils/ModelAPI/ModelAPI";
+import Label from "Common/Models/DatabaseModels/Label";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
+import MonitorStatus from "Common/Models/DatabaseModels/MonitorStatus";
 import React, { FunctionComponent, ReactElement } from "react";
 import RouteMap, { RouteUtil } from "../../Utils/RouteMap";
 import PageMap from "../../Utils/PageMap";
 import MonitorElement from "./Monitor";
+import ActionButtonSchema from "Common/UI/Components/ActionButton/ActionButtonSchema";
+import { CardButtonSchema } from "Common/UI/Components/Card/Card";
 
 export interface ComponentProps {
   query?: Query<Monitor> | undefined;
   noItemsMessage?: string | undefined;
   title?: string | undefined;
   description?: string | undefined;
+  disableCreate?: boolean | undefined;
+  actionButtons?: Array<ActionButtonSchema<Monitor>> | undefined;
+  cardButtons?: Array<CardButtonSchema> | undefined;
 }
 
 const MonitorsTable: FunctionComponent<ComponentProps> = (
@@ -168,10 +173,11 @@ const MonitorsTable: FunctionComponent<ComponentProps> = (
           ModalTableBulkDefaultActions.Delete,
         ],
       }}
+      actionButtons={props.actionButtons}
       isDeleteable={false}
       showViewIdButton={true}
       isEditable={false}
-      isCreateable={true}
+      isCreateable={!props.disableCreate}
       isViewable={true}
       query={props.query || {}}
       createEditModalWidth={ModalWidth.Large}
@@ -203,9 +209,12 @@ const MonitorsTable: FunctionComponent<ComponentProps> = (
         title: props.title || "Monitors",
         description:
           props.description || "Here is a list of monitors for this project.",
+        buttons: props.cardButtons,
       }}
       selectMoreFields={{
         disableActiveMonitoring: true,
+        isNoProbeEnabledOnThisMonitor: true,
+        isAllProbesDisconnectedFromThisMonitor: true,
       }}
       noItemsMessage={props.noItemsMessage || "No monitors found."}
       formFields={[
@@ -417,6 +426,26 @@ const MonitorsTable: FunctionComponent<ComponentProps> = (
                   shouldAnimate={false}
                   color={Gray500}
                   text={"Disabled"}
+                />
+              );
+            }
+
+            if (item && item.isNoProbeEnabledOnThisMonitor) {
+              return (
+                <Statusbubble
+                  shouldAnimate={false}
+                  color={Red500}
+                  text={"Probes Not Enabled"}
+                />
+              );
+            }
+
+            if (item && item.isAllProbesDisconnectedFromThisMonitor) {
+              return (
+                <Statusbubble
+                  shouldAnimate={false}
+                  color={Red500}
+                  text={"Probes Disconnected"}
                 />
               );
             }

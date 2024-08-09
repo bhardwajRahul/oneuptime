@@ -39,21 +39,12 @@ RUN npm install
 COPY ./Common /usr/src/Common
 
 
-WORKDIR /usr/src/Model
-COPY ./Model/package*.json /usr/src/Model/
-# Set version in ./Model/package.json to the APP_VERSION
-RUN sed -i "s/\"version\": \".*\"/\"version\": \"$APP_VERSION\"/g" /usr/src/Model/package.json
-RUN npm install
-COPY ./Model /usr/src/Model
 
 
 
-WORKDIR /usr/src/CommonServer
-COPY ./CommonServer/package*.json /usr/src/CommonServer/
-# Set version in ./CommonServer/package.json to the APP_VERSION
-RUN sed -i "s/\"version\": \".*\"/\"version\": \"$APP_VERSION\"/g" /usr/src/CommonServer/package.json
-RUN npm install
-COPY ./CommonServer /usr/src/CommonServer
+
+
+
 
 
 
@@ -64,6 +55,8 @@ WORKDIR /usr/src/app
 # Install app dependencies
 COPY ./Ingestor/package*.json /usr/src/app/
 RUN npm install
+
+ENV NODE_OPTIONS="--max-old-space-size=8192"
 
 # Expose ports.
 #   - 3400: OneUptime-ingestor

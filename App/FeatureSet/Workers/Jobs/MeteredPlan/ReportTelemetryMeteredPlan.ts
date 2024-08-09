@@ -6,16 +6,16 @@ import { EVERY_DAY, EVERY_FIVE_MINUTE } from "Common/Utils/CronTime";
 import {
   IsBillingEnabled,
   IsDevelopment,
-} from "CommonServer/EnvironmentConfig";
-import ProjectService from "CommonServer/Services/ProjectService";
+} from "Common/Server/EnvironmentConfig";
+import ProjectService from "Common/Server/Services/ProjectService";
 import {
   ActiveMonitoringMeteredPlan,
   LogDataIngestMeteredPlan,
   MetricsDataIngestMeteredPlan,
   TracesDataIngestMetredPlan,
-} from "CommonServer/Types/Billing/MeteredPlan/AllMeteredPlans";
-import logger from "CommonServer/Utils/Logger";
-import Project from "Model/Models/Project";
+} from "Common/Server/Types/Billing/MeteredPlan/AllMeteredPlans";
+import logger from "Common/Server/Utils/Logger";
+import Project from "Common/Models/DatabaseModels/Project";
 
 RunCron(
   "MeteredPlan:ReportTelemetryMeteredPlan",

@@ -1,4 +1,4 @@
-import ServiceLanguage from "Common/Types/ServiceCatalog/ServiceLanguage";
+import TechStack from "Common/Types/ServiceCatalog/TechStack";
 
 export default class ServiceFileTypesUtil {
   private static getCommonDirectoriesToIgnore(): string[] {
@@ -21,43 +21,43 @@ export default class ServiceFileTypesUtil {
     return [".DS_Store", "Thumbs.db", ".gitignore", ".gitattributes"];
   }
 
-  public static getCommonFilesToIgnoreByServiceLanguage(
-    serviceLanguage: ServiceLanguage,
+  public static getCommonFilesToIgnoreByTechStackItem(
+    techStack: TechStack,
   ): string[] {
     let filesToIgnore: string[] = [];
 
-    switch (serviceLanguage) {
-      case ServiceLanguage.NodeJS:
+    switch (techStack) {
+      case TechStack.NodeJS:
         filesToIgnore = ["package-lock.json"];
         break;
-      case ServiceLanguage.Python:
+      case TechStack.Python:
         filesToIgnore = ["__pycache__"];
         break;
-      case ServiceLanguage.Ruby:
+      case TechStack.Ruby:
         filesToIgnore = ["Gemfile.lock"];
         break;
-      case ServiceLanguage.Go:
+      case TechStack.Go:
         filesToIgnore = ["go.sum", "go.mod"];
         break;
-      case ServiceLanguage.Java:
+      case TechStack.Java:
         filesToIgnore = ["pom.xml"];
         break;
-      case ServiceLanguage.PHP:
+      case TechStack.PHP:
         filesToIgnore = ["composer.lock"];
         break;
-      case ServiceLanguage.CSharp:
+      case TechStack.CSharp:
         filesToIgnore = ["packages", "bin", "obj"];
         break;
-      case ServiceLanguage.CPlusPlus:
+      case TechStack.CPlusPlus:
         filesToIgnore = ["build", "CMakeFiles", "CMakeCache.txt", "Makefile"];
         break;
-      case ServiceLanguage.Rust:
+      case TechStack.Rust:
         filesToIgnore = ["Cargo.lock"];
         break;
-      case ServiceLanguage.Swift:
+      case TechStack.Swift:
         filesToIgnore = ["Podfile.lock"];
         break;
-      case ServiceLanguage.Kotlin:
+      case TechStack.Kotlin:
         filesToIgnore = [
           "gradle",
           "build",
@@ -66,23 +66,37 @@ export default class ServiceFileTypesUtil {
           "gradle.properties",
         ];
         break;
-      case ServiceLanguage.TypeScript:
+      case TechStack.TypeScript:
         filesToIgnore = ["node_modules", "package-lock.json"];
         break;
-      case ServiceLanguage.JavaScript:
+      case TechStack.JavaScript:
         filesToIgnore = ["node_modules", "package-lock.json"];
         break;
-      case ServiceLanguage.Shell:
+      case TechStack.Shell:
         filesToIgnore = [];
         break;
-      case ServiceLanguage.React:
+      case TechStack.React:
         filesToIgnore = ["node_modules", "package-lock.json"];
         break;
-      case ServiceLanguage.Other:
+      case TechStack.Other:
         filesToIgnore = [];
         break;
       default:
         filesToIgnore = [];
+    }
+
+    return filesToIgnore;
+  }
+
+  public static getCommonFilesToIgnoreByTechStack(
+    techStack: Array<TechStack>,
+  ): string[] {
+    let filesToIgnore: string[] = [];
+
+    for (const stack of techStack) {
+      filesToIgnore = filesToIgnore.concat(
+        this.getCommonFilesToIgnoreByTechStackItem(stack),
+      );
     }
 
     return filesToIgnore
@@ -95,62 +109,79 @@ export default class ServiceFileTypesUtil {
     return [".md", "dockerfile", ".yml", ".yaml", ".sh", ".gitignore"];
   }
 
-  public static getFileExtentionsByServiceLanguage(
-    serviceLanguage: ServiceLanguage,
+  public static getFileExtentionsByTechStackItem(
+    techStack: TechStack,
   ): string[] {
     let fileExtentions: Array<string> = [];
 
-    switch (serviceLanguage) {
-      case ServiceLanguage.NodeJS:
+    switch (techStack) {
+      case TechStack.NodeJS:
         fileExtentions = [".js", ".ts", ".json", ".mjs"];
         break;
-      case ServiceLanguage.Python:
+      case TechStack.Python:
         fileExtentions = [".py"];
         break;
-      case ServiceLanguage.Ruby:
+      case TechStack.Ruby:
         fileExtentions = [".rb"];
         break;
-      case ServiceLanguage.Go:
+      case TechStack.Go:
         fileExtentions = [".go"];
         break;
-      case ServiceLanguage.Java:
+      case TechStack.Java:
         fileExtentions = [".java"];
         break;
-      case ServiceLanguage.PHP:
+      case TechStack.PHP:
         fileExtentions = [".php"];
         break;
-      case ServiceLanguage.CSharp:
+      case TechStack.CSharp:
         fileExtentions = [".cs"];
         break;
-      case ServiceLanguage.CPlusPlus:
+      case TechStack.CPlusPlus:
         fileExtentions = [".cpp", ".c"];
         break;
-      case ServiceLanguage.Rust:
+      case TechStack.Rust:
         fileExtentions = [".rs"];
         break;
-      case ServiceLanguage.Swift:
+      case TechStack.Swift:
         fileExtentions = [".swift"];
         break;
-      case ServiceLanguage.Kotlin:
+      case TechStack.Kotlin:
         fileExtentions = [".kt", ".kts"];
         break;
-      case ServiceLanguage.TypeScript:
+      case TechStack.TypeScript:
         fileExtentions = [".ts", ".tsx"];
         break;
-      case ServiceLanguage.JavaScript:
+      case TechStack.JavaScript:
         fileExtentions = [".js", ".jsx"];
         break;
-      case ServiceLanguage.Shell:
+      case TechStack.Shell:
         fileExtentions = [".sh"];
         break;
-      case ServiceLanguage.React:
+      case TechStack.React:
         fileExtentions = [".js", ".ts", ".jsx", ".tsx"];
         break;
-      case ServiceLanguage.Other:
+      case TechStack.Other:
         fileExtentions = [];
         break;
       default:
         fileExtentions = [];
+    }
+
+    return fileExtentions;
+  }
+
+  public static getFileExtentionsByTechStack(
+    techStack: Array<TechStack>,
+  ): string[] {
+    let fileExtentions: Array<string> = [];
+
+    for (let i: number = 0; i < techStack.length; i++) {
+      if (!techStack[i]) {
+        continue;
+      }
+      fileExtentions = fileExtentions.concat(
+        this.getFileExtentionsByTechStackItem(techStack[i]!),
+      );
     }
 
     // add common files extentions

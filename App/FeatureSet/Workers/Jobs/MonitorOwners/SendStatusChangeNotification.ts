@@ -8,15 +8,15 @@ import EmailTemplateType from "Common/Types/Email/EmailTemplateType";
 import NotificationSettingEventType from "Common/Types/NotificationSetting/NotificationSettingEventType";
 import { SMSMessage } from "Common/Types/SMS/SMS";
 import { EVERY_MINUTE } from "Common/Utils/CronTime";
-import MonitorService from "CommonServer/Services/MonitorService";
-import MonitorStatusTimelineService from "CommonServer/Services/MonitorStatusTimelineService";
-import ProjectService from "CommonServer/Services/ProjectService";
-import UserNotificationSettingService from "CommonServer/Services/UserNotificationSettingService";
-import Markdown, { MarkdownContentType } from "CommonServer/Types/Markdown";
-import Monitor from "Model/Models/Monitor";
-import MonitorStatus from "Model/Models/MonitorStatus";
-import MonitorStatusTimeline from "Model/Models/MonitorStatusTimeline";
-import User from "Model/Models/User";
+import MonitorService from "Common/Server/Services/MonitorService";
+import MonitorStatusTimelineService from "Common/Server/Services/MonitorStatusTimelineService";
+import ProjectService from "Common/Server/Services/ProjectService";
+import UserNotificationSettingService from "Common/Server/Services/UserNotificationSettingService";
+import Markdown, { MarkdownContentType } from "Common/Server/Types/Markdown";
+import Monitor from "Common/Models/DatabaseModels/Monitor";
+import MonitorStatus from "Common/Models/DatabaseModels/MonitorStatus";
+import MonitorStatusTimeline from "Common/Models/DatabaseModels/MonitorStatusTimeline";
+import User from "Common/Models/DatabaseModels/User";
 
 RunCron(
   "MonitorOwner:SendStatusChangeEmail",

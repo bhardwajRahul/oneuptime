@@ -5,12 +5,12 @@ import Color from "Common/Types/Color";
 import IconProp from "Common/Types/Icon/IconProp";
 import { FilterCondition } from "Common/Types/Monitor/CriteriaFilter";
 import MonitorCriteriaInstance from "Common/Types/Monitor/MonitorCriteriaInstance";
-import HorizontalRule from "CommonUI/src/Components/HorizontalRule/HorizontalRule";
-import Icon from "CommonUI/src/Components/Icon/Icon";
-import Statusbubble from "CommonUI/src/Components/StatusBubble/StatusBubble";
-import IncidentSeverity from "Model/Models/IncidentSeverity";
-import MonitorStatus from "Model/Models/MonitorStatus";
-import OnCallDutyPolicy from "Model/Models/OnCallDutyPolicy";
+import HorizontalRule from "Common/UI/Components/HorizontalRule/HorizontalRule";
+import Icon from "Common/UI/Components/Icon/Icon";
+import Statusbubble from "Common/UI/Components/StatusBubble/StatusBubble";
+import IncidentSeverity from "Common/Models/DatabaseModels/IncidentSeverity";
+import MonitorStatus from "Common/Models/DatabaseModels/MonitorStatus";
+import OnCallDutyPolicy from "Common/Models/DatabaseModels/OnCallDutyPolicy";
 import React, { FunctionComponent, ReactElement } from "react";
 
 export interface ComponentProps {
