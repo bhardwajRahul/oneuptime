@@ -458,10 +458,9 @@ export default class API {
     // get url from error
     const url: string = error?.config?.url || "";
 
-    throw new APIException(
-      `Error occurred while making request to ${url}.`,
-      error,
-    );
+    const errorMessage: string = error.message || error.toString();
+
+    throw new APIException(`Request failed to ${url}. ${errorMessage}`, error);
   }
 
   public static getFriendlyErrorMessage(error: AxiosError | Error): string {
