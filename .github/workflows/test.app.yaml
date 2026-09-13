@@ -89,3 +89,90 @@ jobs:
             output/playwright/session-replay-ui/*.png
             output/playwright/session-replay-ui/test-results
           retention-days: 7
+
+  dashboard-offline-ui:
+    name: Dashboard Offline UI
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+      # Each suite bundles real Dashboard / Status Page sources with esbuild and
+      # serves them against fixture data on 127.0.0.1: no database or Docker stack.
+      - name: Install shared dependencies
+        working-directory: Common
+        run: npm install
+      - name: Install Dashboard dependencies
+        working-directory: App/FeatureSet/Dashboard
+        run: npm install
+      - name: Install Status Page dependencies
+        working-directory: App/FeatureSet/StatusPage
+        run: npm install
+      - name: Install browser test dependencies
+        working-directory: E2E
+        # Skip the preinstall hook that downloads every browser.
+        run: npm install --ignore-scripts
+      - name: Install browsers
+        working-directory: E2E
+        # The Alerts suite also runs in Firefox; every other suite is Chromium only.
+        run: npx playwright install --with-deps chromium firefox
+      # Every suite runs even if an earlier one failed, so one run reports them all.
+      - name: Run Incoming Call Policies UI regressions
+        if: ${{ !cancelled() }}
+        working-directory: E2E
+        run: npm run test-incoming-call-policies-ui
+      - name: Run SLO Burn Rate UI regressions
+        if: ${{ !cancelled() }}
+        working-directory: E2E
+        run: npm run test-slo-burn-rate-ui
+      - name: Run Status Page Search UI regressions
+        if: ${{ !cancelled() }}
+        working-directory: E2E
+        run: npm run test-status-page-search-ui
+      - name: Run Pencil Button UI regressions
+        if: ${{ !cancelled() }}
+        working-directory: E2E
+        run: npm run test-pencil-button-ui
+      - name: Run Alerts UI regressions
+        if: ${{ !cancelled() }}
+        working-directory: E2E
+        run: npm run test-alerts-ui
+      - name: Run Label Rules UI regressions
+        if: ${{ !cancelled() }}
+        working-directory: E2E
+        run: npm run test-label-rule-transfer-ui
+      - name: Run Discovery UI regressions
+        if: ${{ !cancelled() }}
+        working-directory: E2E
+        run: npm run test-discovery-ui
+      - name: Run Topology UI regressions
+        if: ${{ !cancelled() }}
+        working-directory: E2E
+        run: npm run test-topology-ui
+      - name: Upload browser screenshots and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.job }}-${{ github.run_attempt }}
+          path: |
+            output/playwright/incoming-call-policies/*.png
+            output/playwright/incoming-call-policies/test-results
+            output/playwright/slo-burn-rate/*.png
+            output/playwright/slo-burn-rate/test-results
+            output/playwright/status-page-search/test-results
+            output/playwright/pencil-button/test-results
+            output/playwright/alerts/*.png
+            output/playwright/alerts/test-results
+            output/playwright/label-rule-import-export/*.png
+            output/playwright/label-rule-import-export/fixture-test-results
+            output/playwright/discovery/*.png
+            output/playwright/discovery/test-results
+            output/playwright/topology/*.png
+            output/playwright/topology/test-results
+          retention-days: 7

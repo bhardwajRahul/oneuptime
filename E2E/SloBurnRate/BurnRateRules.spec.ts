@@ -251,7 +251,11 @@ test("the step rail gains and loses a routing step with the toggle that owns it"
   // Declaring an incident adds the step that configures it.
   await incidentToggle.click();
   await expect(incidentToggle).toHaveAttribute("aria-checked", "true");
-  expect(await visibleSteps(page)).toEqual(STEP_RAIL);
+  await expect
+    .poll(() => {
+      return visibleSteps(page);
+    })
+    .toEqual(STEP_RAIL);
 
   await screenshot(
     page,
@@ -262,19 +266,37 @@ test("the step rail gains and loses a routing step with the toggle that owns it"
   // And dropping the alert takes its routing step away again.
   await alertToggle.click();
   await expect(alertToggle).toHaveAttribute("aria-checked", "false");
-  expect(await visibleSteps(page)).toEqual([
-    "Rule",
-    "Burn Window",
-    "What It Declares",
-    "Incident Routing",
-  ]);
+  await expect
+    .poll(() => {
+      return visibleSteps(page);
+    })
+    .toEqual(["Rule", "Burn Window", "What It Declares", "Incident Routing"]);
 
   /*
    * A rule that declares nothing is refused here rather than after a
    * round-trip. The server enforces it too — this only saves the trip.
+   *
+   * With neither output on, both routing steps leave the rail, so What It
+   * Declares becomes the last step and its primary button turns from "Next"
+   * into the submit button. Wait for that before clicking: reaching for "Next"
+   * straight after the toggle only worked when the click beat the re-render.
    */
   await incidentToggle.click();
-  await next(page);
+  await expect(incidentToggle).toHaveAttribute("aria-checked", "false");
+  await expect
+    .poll(() => {
+      return visibleSteps(page);
+    })
+    .toEqual(["Rule", "Burn Window", "What It Declares"]);
+  const dialog: ReturnType<Page["locator"]> = page.getByRole("dialog", {
+    name: "Create New SLO Burn Rate Rule",
+  });
+  await dialog
+    .getByRole("button", { name: "Create SLO Burn Rate Rule", exact: true })
+    .click();
+
+  // Refused in the form: the dialog is still open on the same step.
+  await expect(dialog).toBeVisible();
 
   const noOutputError: ReturnType<Page["locator"]> = page.getByText(
     "This rule would do nothing. Turn on Create Alert, Declare Incident, or both.",

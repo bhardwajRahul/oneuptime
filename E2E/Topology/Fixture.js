@@ -2,6 +2,9 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
+  Outlet,
+  Route,
+  Routes,
   useLocation,
   useNavigate,
   useParams,
@@ -9,6 +12,7 @@ import {
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import TopologyPage from "../../App/FeatureSet/Dashboard/src/Pages/Topology/TopologyPage";
+import InventoryLayout from "../../App/FeatureSet/Dashboard/src/Pages/Inventory/Layout";
 import InventoryItem from "Common/Models/DatabaseModels/InventoryItem";
 import InventoryItemRelationship from "Common/Models/DatabaseModels/InventoryItemRelationship";
 import EntityType from "Common/Types/Telemetry/EntityType";
@@ -288,10 +292,31 @@ await i18next.use(initReactI18next).init({
   resources: { en: { translation: {} } },
   interpolation: { escapeValue: false },
 });
+/*
+ * The "Topology" title, description and side menu are not part of TopologyPage:
+ * since the persistent side menu change they come from the Inventory layout
+ * that App.tsx mounts around the topology routes. Mount the page the same way,
+ * so the fixture shows the shell a user actually sees.
+ */
 function Fixture() {
   Navigation.setNavigateHook(useNavigate());
   Navigation.setLocation(useLocation());
   Navigation.setParams(useParams());
+  return (
+    <Routes>
+      <Route element={<Shell />}>
+        <Route element={<InventoryLayout />}>
+          <Route
+            path="/dashboard/:projectId/topology/*"
+            element={<TopologyPage />}
+          />
+        </Route>
+      </Route>
+    </Routes>
+  );
+}
+
+function Shell() {
   return (
     <>
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 text-sm">
@@ -301,7 +326,7 @@ function Fixture() {
         </span>
       </div>
       <main className="mx-auto max-w-screen-2xl pb-8">
-        <TopologyPage />
+        <Outlet />
       </main>
     </>
   );

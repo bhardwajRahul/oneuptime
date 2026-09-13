@@ -7,7 +7,9 @@ npm run test-topology-ui
 ```
 
 The dedicated Playwright configuration builds the real `TopologyPage` and its
-production components with the shared frontend esbuild configuration. A small
+production components with the shared frontend esbuild configuration. The page is
+mounted inside the Inventory layout (`Pages/Inventory/Layout.tsx`), exactly as
+`App.tsx` mounts it, because that layout owns the "Topology" title and side menu. A small
 server listens on `127.0.0.1:4199`; Docker, sign-in, ingestion, and external
 services are not required. Install the repository dependencies and Playwright's
 Chromium browser before running.
