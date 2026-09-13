@@ -431,6 +431,18 @@ const RULE_CRITERIA_FIELD_LOOKUP: Readonly<
 export function getRuleCriteriaFieldsForModel(
   modelName: string,
 ): ReadonlyArray<string> | undefined {
+  /*
+   * Own properties only: a plain index would answer inherited
+   * Object.prototype members ("constructor", "toString", "__proto__") with
+   * a function or object instead of undefined, turning an unregistered name
+   * into a non-array allowlist that callers then call .includes() on.
+   */
+  if (
+    !Object.prototype.hasOwnProperty.call(RULE_CRITERIA_FIELD_LOOKUP, modelName)
+  ) {
+    return undefined;
+  }
+
   return RULE_CRITERIA_FIELD_LOOKUP[modelName];
 }
 
