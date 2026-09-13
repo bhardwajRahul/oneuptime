@@ -313,6 +313,18 @@ export default class LayerUtil {
         hasReachedTheEndOfTheCalendar = true;
       }
 
+      /*
+       * When the window end lands exactly on a handoff, the previous period
+       * already ended at `end` and this period starts 1 s after it, so the
+       * clamp above leaves an inverted [end + 1s, end] slice. Emitting it
+       * handed direct getEvents callers (the layer shift preview, the calendar
+       * feed coverage envelope) a negative-length event for the next user.
+       * It is the final period, so stopping here changes nothing else.
+       */
+      if (OneUptimeDate.isAfter(currentEventStartTime, currentEventEndTime)) {
+        break;
+      }
+
       // check restriction times. if the end time of the event is after the end time of the restriction times, we need to update the end time of the event.
 
       const trimmedStartAndEndTimes: Array<StartAndEndTime> =
